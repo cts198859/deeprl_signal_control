@@ -1,0 +1,56 @@
+<routes>
+  <flow id="f:3,0" departPos="random_free" begin="0" end="1200" probability="0.50" type="type1">
+    <route edges="e:nt4,nt5 e:nt5,nt6 e:nt6,np12"/>
+  </flow>
+  <flow id="f:4,0" departPos="random_free" begin="0" end="1200" probability="0.50" type="type1">
+    <route edges="e:nt1,nt2 e:nt2,np4"/>
+  </flow>
+  <flow id="f:5,0" departPos="random_free" begin="0" end="1200" probability="0.50" type="type1">
+    <route edges="e:nt1,nt6 e:nt6,np13"/>
+  </flow>
+  <flow id="f:0,1" departPos="random_free" begin="1200" end="2400" probability="0.50" type="type1">
+    <route edges="e:nt1,npc e:npc,nt5 e:nt5,np11"/>
+  </flow>
+  <flow id="f:3,1" departPos="random_free" begin="1200" end="2400" probability="0.50" type="type1">
+    <route edges="e:nt4,nt5 e:nt5,nt6 e:nt6,np12"/>
+  </flow>
+  <flow id="f:4,1" departPos="random_free" begin="1200" end="2400" probability="0.50" type="type1">
+    <route edges="e:nt1,nt2 e:nt2,np4"/>
+  </flow>
+  <flow id="f:1,2" departPos="random_free" begin="2400" end="3600" probability="0.50" type="type1">
+    <route edges="e:nt1,npc e:npc,nt5 e:nt5,nt6 e:nt6,np12"/>
+  </flow>
+  <flow id="f:2,2" departPos="random_free" begin="2400" end="3600" probability="0.50" type="type1">
+    <route edges="e:nt4,nt5 e:nt5,np11"/>
+  </flow>
+  <flow id="f:5,2" departPos="random_free" begin="2400" end="3600" probability="0.50" type="type1">
+    <route edges="e:nt1,nt6 e:nt6,np13"/>
+  </flow>
+  <flow id="f:4,3" departPos="random_free" begin="3600" end="4800" probability="0.50" type="type1">
+    <route edges="e:nt1,nt2 e:nt2,np4"/>
+  </flow>
+  <flow id="f:5,3" departPos="random_free" begin="3600" end="4800" probability="0.50" type="type1">
+    <route edges="e:nt1,nt6 e:nt6,np13"/>
+  </flow>
+  <flow id="f:9,3" departPos="random_free" begin="3600" end="4800" probability="0.50" type="type1">
+    <route edges="e:nt4,nt3 e:nt3,nt2 e:nt2,np5"/>
+  </flow>
+  <flow id="f:5,4" departPos="random_free" begin="4800" end="6000" probability="0.50" type="type1">
+    <route edges="e:nt1,nt6 e:nt6,np13"/>
+  </flow>
+  <flow id="f:6,4" departPos="random_free" begin="4800" end="6000" probability="0.50" type="type1">
+    <route edges="e:nt1,npc e:npc,nt3 e:nt3,np6"/>
+  </flow>
+  <flow id="f:9,4" departPos="random_free" begin="4800" end="6000" probability="0.50" type="type1">
+    <route edges="e:nt4,nt3 e:nt3,nt2 e:nt2,np5"/>
+  </flow>
+  <flow id="f:4,5" departPos="random_free" begin="6000" end="7200" probability="0.50" type="type1">
+    <route edges="e:nt1,nt2 e:nt2,np4"/>
+  </flow>
+  <flow id="f:7,5" departPos="random_free" begin="6000" end="7200" probability="0.50" type="type1">
+    <route edges="e:nt1,npc e:npc,nt3 e:nt3,nt2 e:nt2,np5"/>
+  </flow>
+  <flow id="f:8,5" departPos="random_free" begin="6000" end="7200" probability="0.50" type="type1">
+    <route edges="e:nt4,nt3 e:nt3,np6"/>
+  </flow>
+</routes>

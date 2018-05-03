@@ -1,0 +1,40 @@
+<additional>
+  <tlLogic id="nt1" programID="0" offset="0" type="static">
+    <phase duration="30" state="GGGrrrrrr"/>
+    <phase duration="3" state="yyyrrrrrr"/>
+    <phase duration="30" state="rrrGGGrrr"/>
+    <phase duration="3" state="rrryyyrrr"/>
+    <phase duration="30" state="rrrrrrGGG"/>
+    <phase duration="3" state="rrrrrryyy"/>
+  </tlLogic>
+  <tlLogic id="nt2" programID="0" offset="0" type="static">
+    <phase duration="30" state="GGrr"/>
+    <phase duration="3" state="yyrr"/>
+    <phase duration="30" state="rrGG"/>
+    <phase duration="3" state="rryy"/>
+  </tlLogic>
+  <tlLogic id="nt3" programID="0" offset="0" type="static">
+    <phase duration="30" state="GGrr"/>
+    <phase duration="3" state="yyrr"/>
+    <phase duration="30" state="rrGG"/>
+    <phase duration="3" state="rryy"/>
+  </tlLogic>
+  <tlLogic id="nt4" programID="0" offset="0" type="static">
+    <phase duration="30" state="GGrr"/>
+    <phase duration="3" state="yyrr"/>
+    <phase duration="30" state="rrGG"/>
+    <phase duration="3" state="rryy"/>
+  </tlLogic>
+  <tlLogic id="nt5" programID="0" offset="0" type="static">
+    <phase duration="30" state="GGrr"/>
+    <phase duration="3" state="yyrr"/>
+    <phase duration="30" state="rrGG"/>
+    <phase duration="3" state="rryy"/>
+  </tlLogic>
+  <tlLogic id="nt6" programID="0" offset="0" type="static">
+    <phase duration="30" state="GGrr"/>
+    <phase duration="3" state="yyrr"/>
+    <phase duration="30" state="rrGG"/>
+    <phase duration="3" state="rryy"/>
+  </tlLogic>
+</additional>

@@ -1,0 +1,31 @@
+<additional>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:np1,nt1" lane="e:np1,nt1_0" pos="-50"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:np2,nt1" lane="e:np2,nt1_0" pos="-50"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:np3,nt1" lane="e:np3,nt1_0" pos="-50"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:np8,nt4" lane="e:np8,nt4_0" pos="-50"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:np9,nt4" lane="e:np9,nt4_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt1,nt2" lane="e:nt1,nt2_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:nt1,nt2" lane="e:nt1,nt2_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt1,npc" lane="e:nt1,npc_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:nt1,npc" lane="e:nt1,npc_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt1,nt6" lane="e:nt1,nt6_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:nt1,nt6" lane="e:nt1,nt6_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:npc,nt3" lane="e:npc,nt3_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:npc,nt3" lane="e:npc,nt3_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:npc,nt5" lane="e:npc,nt5_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:npc,nt5" lane="e:npc,nt5_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt5,nt6" lane="e:nt5,nt6_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:nt5,nt6" lane="e:nt5,nt6_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt4,nt3" lane="e:nt4,nt3_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:nt4,nt3" lane="e:nt4,nt3_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt4,nt5" lane="e:nt4,nt5_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:nt4,nt5" lane="e:nt4,nt5_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt3,nt2" lane="e:nt3,nt2_0" pos="10"/>
+  <inductionLoop file="ild_in.out" freq="15" id="ild_out:nt3,nt2" lane="e:nt3,nt2_0" pos="-50"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt6,np12" lane="e:nt6,np12_0" pos="10"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt6,np13" lane="e:nt6,np13_0" pos="10"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt2,np4" lane="e:nt2,np4_0" pos="10"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt2,np5" lane="e:nt2,np5_0" pos="10"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt5,np11" lane="e:nt5,np11_0" pos="10"/>
+  <inductionLoop file="ild_out.out" freq="15" id="ild_in:nt3,np6" lane="e:nt3,np6_0" pos="10"/>
+</additional>
