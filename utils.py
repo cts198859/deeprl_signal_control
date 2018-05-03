@@ -27,6 +27,18 @@ def init_log(log_dir):
                         ])
 
 
+def init_test_flag(test_mode):
+    if test_mode == 'no_test':
+        return False, False
+    if test_mode == 'in_train_test':
+        return True, False
+    if test_mode == 'after_train_test':
+        return False, True
+    if test_mode == 'all_test':
+        return True, True
+    return False, False
+
+
 class Counter:
     def __init__(self, total_min_step, total_max_step, test_step, log_step, delta_reward):
         self.counter = itertools.count(1)
