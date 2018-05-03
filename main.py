@@ -18,7 +18,7 @@ def parse_args():
                         default=default_base_dir, help="experiment base dir")
     parser.add_argument('--config-dir', type=str, required=False,
                         default=default_config_dir, help="experiment config path")
-    parser.add_argument('--test-mode', type=str, reauired=False,
+    parser.add_argument('--test-mode', type=str, required=False,
                         default='no_test',
                         help="select from: no_test, in_train_test, after_train_test, all_test")
     args = parser.parse_args()
