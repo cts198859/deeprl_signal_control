@@ -43,20 +43,17 @@ def train():
                  (env.n_s, env.n_a, env.n_s_ls, env.n_a_ls))
 
     # init step counter
-    total_step_min = int(config.getfloat('TRAIN_CONFIG', 'total_step_min'))
-    total_step_max = int(config.getfloat('TRAIN_CONFIG', 'total_step_max'))
+    total_step = int(config.getfloat('TRAIN_CONFIG', 'total_step'))
     test_step = int(config.getfloat('TRAIN_CONFIG', 'test_interval'))
     log_step = int(config.getfloat('TRAIN_CONFIG', 'log_interval'))
-    delta_reward = config.getfloat('TRAIN_CONFIG', 'delta_reward')
-    global_counter = Counter(total_step_min, total_step_max, test_step,
-                             log_step, delta_reward)
+    global_counter = Counter(total_step, test_step, log_step)
 
     # init centralized or multi agent
     seed = config.getint('ENV_CONFIG', 'seed')
     coord = tf.train.Coordinator()
 
     if env.coop_level == 'global':
-        model = A2C(env.n_s, env.n_a, total_step_min,
+        model = A2C(env.n_s, env.n_a, total_step,
                     config['MODEL_CONFIG'], seed=seed)
     else:
         model = None
@@ -86,6 +83,9 @@ def train():
     final_step = global_counter.cur_step
     logging.info('Training: save final model at step %d ...' % final_step)
     model.save(dirs['model'], final_step)
+    env.terminate()
+    if in_test:
+        test_env.terminate()
 
 
 if __name__ == '__main__':

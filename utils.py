@@ -40,17 +40,14 @@ def init_test_flag(test_mode):
 
 
 class Counter:
-    def __init__(self, total_min_step, total_max_step, test_step, log_step, delta_reward):
+    def __init__(self, total_step, test_step, log_step):
         self.counter = itertools.count(1)
         self.cur_step = 0
-        self.cur_test_step = total_min_step
-        self.total_min_step = total_min_step
-        self.total_max_step = total_max_step
+        self.cur_test_step = 0
+        self.total_step = total_step
         self.test_step = test_step
         self.log_step = log_step
         self.stop = False
-        self.prev_reward = None
-        self.delta_reward = delta_reward
 
     def next(self):
         self.cur_step = next(self.counter)
@@ -63,19 +60,17 @@ class Counter:
             self.cur_test_step = self.cur_step
         return test
 
-    def update_test(self, reward):
-        if self.prev_reward is not None:
-            if abs(self.prev_reward - reward) <= self.delta_reward:
-                self.stop = True
-        self.prev_reward = reward
+    # def update_test(self, reward):
+    #     if self.prev_reward is not None:
+    #         if abs(self.prev_reward - reward) <= self.delta_reward:
+    #             self.stop = True
+    #     self.prev_reward = reward
 
     def should_log(self):
         return (self.cur_step % self.log_step == 0)
 
     def should_stop(self):
-        if self.cur_step < self.total_min_step:
-            return False
-        if self.cur_step >= self.total_max_step:
+        if self.cur_step >= self.total_step:
             return True
         return self.stop
 
@@ -182,5 +177,5 @@ class Tester(Trainer):
                 self._add_summary(avg_reward, global_step)
                 logging.info('Testing: global step %d, avg R: %.2f' %
                              (global_step, avg_reward))
-                self.global_counter.update_test(avg_reward)
+                # self.global_counter.update_test(avg_reward)
         
