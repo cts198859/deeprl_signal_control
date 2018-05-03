@@ -6,7 +6,7 @@ import threading
 from envs.small_grid_env import SmallGridEnv
 from agents.models import A2C
 from utils import (Counter, Trainer, Tester,
-                   init_dir, init_log
+                   init_dir, init_log, init_test_flag
                    )
 
 
@@ -18,6 +18,9 @@ def parse_args():
                         default=default_base_dir, help="experiment base dir")
     parser.add_argument('--config-dir', type=str, required=False,
                         default=default_config_dir, help="experiment config path")
+    parser.add_argument('--test-mode', type=str, reauired=False,
+                        default='no_test',
+                        help="select from: no_test, in_train_test, after_train_test, all_test")
     args = parser.parse_args()
     return args
 
@@ -30,9 +33,12 @@ def train():
     config.read(config_dir)
     dirs = init_dir(base_dir)
     init_log(dirs['log'])
+    in_test, post_test = init_test_flag(args.test_mode)
+
     # init env
     env = SmallGridEnv(config['ENV_CONFIG'], port=0)
-    test_env = SmallGridEnv(config['ENV_CONFIG'], port=1)
+    if in_test:
+        test_env = SmallGridEnv(config['ENV_CONFIG'], port=1)
     logging.info('Training: s dim: %d, a dim %d, s dim ls: %r, a dim ls: %r' %
                  (env.n_s, env.n_a, env.n_s_ls, env.n_a_ls))
 
@@ -58,7 +64,8 @@ def train():
     threads = []
     summary_writer = tf.summary.FileWriter(dirs['log'])
     trainer = Trainer(env, model, global_counter, summary_writer)
-    tester = Tester(test_env, model, global_counter, summary_writer)
+    if in_test:
+        tester = Tester(test_env, model, global_counter, summary_writer)
 
     def train_fn():
         trainer.run(coord)
@@ -69,9 +76,10 @@ def train():
     thread = threading.Thread(target=train_fn)
     thread.start()
     threads.append(thread)
-    thread = threading.Thread(target=test_fn)
-    thread.start()
-    threads.append(thread)
+    if in_test:
+        thread = threading.Thread(target=test_fn)
+        thread.start()
+        threads.append(thread)
     coord.join(threads)
 
     # save model
@@ -79,7 +87,6 @@ def train():
     logging.info('Training: save final model at step %d ...' % final_step)
     model.save(dirs['model'], final_step)
 
-    # evaluate
 
 if __name__ == '__main__':
     train()
