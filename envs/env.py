@@ -373,19 +373,26 @@ class TrafficSimulator:
             self.control_data.append(cur_control)
         global_reward = np.sum(reward) # for fair comparison
         if self.coop_level == 'global':
-            reward = np.sum(reward)
+            reward = global_reward
+        elif self.coop_level == 'local':
+            # global reward 
+            new_reward = [global_reward] * len(reward)
+            reward = np.array(new_reward)
         elif self.coop_level == 'neighbor':
+            # discounted global reward
             new_reward = []
             for node, r in zip(self.control_nodes, reward):
                 cur_reward = r
-                for nnode in self.nodes[node].neighbor:
-                    # discount the neigboring reward
-                    if self.nodes[nnode].control:
-                        nnode_i = self.control_nodes.index(nnode)
-                        cur_reward += self.coop_gamma * reward[nnode_i]
+                for i, nnode in enumerate(self.control_nodes):
+                    if nnode == node:
+                        continue
+                    if nnode in self.nodes[node].neighbor:
+                        cur_reward += self.coop_gamma * reward[i]
+                    else:
+                        cur_reward += (self.coop_gamma ** 2) * reward[i]
                 new_reward.append(cur_reward)
             reward = np.array(new_reward)
-        # TODO: neighbor uses spatially discounted reward 
+        # TODO: neighbor uses spatially discounted reward
         return state, reward, done, global_reward
 
     def update_fingerprint(self, policy):
