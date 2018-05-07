@@ -121,9 +121,9 @@ class Trainer():
                 else:
                     global_value = np.sum(np.array(value))
                 logging.info('''Training: global step %d, episode step %d,
-                                   ob: %s, a: %.2f, pi: %s, v: %.2f, r: %.2f, done: %r''' %
+                                   ob: %s, a: %s, pi: %s, v: %.2f, r: %.2f, done: %r''' %
                              (global_step, self.cur_step,
-                              str(ob), action, str(policy), global_value, global_reward, done))
+                              str(ob), str(action), str(policy), global_value, global_reward, done))
             # termination
             if done:
                 ob = self.env.reset()
