@@ -11,45 +11,37 @@ class A2C:
         self.reward_norm = model_config.getfloat('reward_norm')
         self.n_s = n_s
         self.n_a = n_a
+        self.n_step = model_config.getint('batch_size')
         # init tf
         tf.reset_default_graph()
         tf.set_random_seed(seed)
         config = tf.ConfigProto(allow_soft_placement=True)
         self.sess = tf.Session(config=config)
-        self._init_policy(model_config)
+        self.policy = self._init_policy(n_s, n_a, model_config)
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
-            self._init_train(total_step, model_config)
+            self.total_step = total_step
+            self._init_scheduler(model_config)
+            self._init_train(model_config)
         self.sess.run(tf.global_variables_initializer())
 
-    def _init_policy(self, model_config):
+    @staticmethod
+    def _init_policy(n_s, n_a, model_config, agent_name=None):
         n_step = model_config.getint('batch_size')
         n_h = model_config.getint('num_h')
         policy_name = model_config.get('policy')
         if policy_name == 'lstm':
             n_lstm = model_config.getint('num_lstm')
-            policy = LstmPolicy(self.n_s, self.n_a, n_step, n_fc=n_h, n_lstm=n_lstm)
-        elif policy_name == 'cnn1':
-            n_filter = model_config.getint('num_filter')
-            m_filter = model_config.getint('size_filter')
-            n_past = model_config.getint('num_past')
-            policy = Cnn1DPolicy(self.n_s, self.n_a, n_step, n_past, n_fc=n_h,
-                                 n_filter=n_filter, m_filter=m_filter)
+            policy = LstmPolicy(n_s, n_a, n_step, n_fc=n_h,
+                                n_lstm=n_lstm, name=agent_name)
         elif policy_name == 'fc':
             n_fc = model_config.getint('num_fc')
-            policy = FcPolicy(self.n_s, self.n_a, n_step, n_fc0=n_fc, n_fc=n_h)
-        self.policy = policy
-        self.n_step = n_step
+            policy = FcPolicy(n_s, n_a, n_step, n_fc0=n_fc,
+                              n_fc=n_h, name=agent_name)
+        return policy
 
-    def _init_train(self, total_step, model_config):
-        # init loss
-        v_coef = model_config.getfloat('value_coef')
-        max_grad_norm = model_config.getfloat('max_grad_norm')
-        alpha = model_config.getfloat('rmsp_alpha')
-        epsilon = model_config.getfloat('rmsp_epsilon')
-        self.policy.prepare_loss(v_coef, max_grad_norm, alpha, epsilon)
-
+    def _init_scheduler(self, model_config):
         # init reward norm/clip
         self.reward_clip = model_config.getfloat('reward_clip')
         self.reward_norm = model_config.getfloat('reward_norm')
@@ -63,14 +55,22 @@ class A2C:
             self.lr_scheduler = Scheduler(lr_init, decay=lr_decay)
         else:
             lr_min = model_config.getfloat('LR_MIN')
-            self.lr_scheduler = Scheduler(lr_init, lr_min, total_step, decay=lr_decay)
+            self.lr_scheduler = Scheduler(lr_init, lr_min, self.total_step, decay=lr_decay)
         if beta_decay == 'constant':
             self.beta_scheduler = Scheduler(beta_init, decay=beta_decay)
         else:
             beta_min = model_config.getfloat('ENTROPY_COEF_MIN')
             beta_ratio = model_config.getfloat('ENTROPY_RATIO')
-            self.beta_scheduler = Scheduler(beta_init, beta_min, total_step * beta_ratio,
+            self.beta_scheduler = Scheduler(beta_init, beta_min, self.total_step * beta_ratio,
                                             decay=beta_decay)
+
+    def _init_train(self, model_config):
+        # init loss
+        v_coef = model_config.getfloat('value_coef')
+        max_grad_norm = model_config.getfloat('max_grad_norm')
+        alpha = model_config.getfloat('rmsp_alpha')
+        epsilon = model_config.getfloat('rmsp_epsilon')
+        self.policy.prepare_loss(v_coef, max_grad_norm, alpha, epsilon)
 
         # init replay buffer
         gamma = model_config.getfloat('gamma')
@@ -121,74 +121,72 @@ class A2C:
 
 
 class MultiA2C(A2C):
-    def __init__(self, sess, n_s_ls, n_a_ls, total_step, i_thread=-1, optimizer_ls=None, lr_ls=None,
-                 model_config=None, discrete=True):
+    def __init__(self, n_s_ls, n_a_ls, total_step,
+                 model_config, seed=0):
         self.agents = []
         self.n_agent = len(n_s_ls)
-        self.i_thread = i_thread
-        policy = model_config.get('POLICY')
-        v_coef = model_config.getfloat('VALUE_COEF')
-        max_grad_norm = model_config.getfloat('MAX_GRAD_NORM')
-        alpha = model_config.getfloat('RMSP_ALPHA')
-        epsilon = model_config.getfloat('RMSP_EPSILON')
-        lr_init = model_config.getfloat('LR_INIT')
-        lr_min = model_config.getfloat('LR_MIN')
-        lr_decay = model_config.get('LR_DECAY')
-        beta_init = model_config.getfloat('ENTROPY_COEF_INIT')
-        beta_min = model_config.getfloat('ENTROPY_COEF_MIN')
-        beta_decay = model_config.get('ENTROPY_DECAY')
-        beta_ratio = model_config.getfloat('ENTROPY_RATIO')
-        gamma = model_config.getfloat('GAMMA')
-        n_step = model_config.getint('NUM_STEP')
-        n_past = model_config.getint('NUM_PAST')
-        n_fc = model_config.getint('NUM_FC')
-        self.reward_norm = model_config.getfloat('REWARD_NORM')
-        self.lrs = []
-        self.optimizers = []
-        self.names = []
-        self.trans_buffers = []
+        self.reward_clip = model_config.getfloat('reward_clip')
+        self.reward_norm = model_config.getfloat('reward_norm')
+        self.n_s_ls = n_s_ls
+        self.n_a_ls = n_a_ls
+        self.n_step = model_config.getint('batch_size')
+        # init tf
+        tf.reset_default_graph()
+        tf.set_random_seed(seed)
+        config = tf.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.Session(config=config)
+        self.policy_ls = []
+        for i, (n_s, n_a) in enumerate(zip(self.n_s_ls, self.n_a_ls)):
+            # agent_name is needed to differentiate multi-agents
+            self.policy_ls.append(self._init_policy(n_s, n_a, model_config, agent_name=str(i)))
+        self.saver = tf.train.Saver(max_to_keep=5)
+        if total_step:
+            # training
+            self.total_step = total_step
+            self._init_scheduler(model_config)
+            self._init_train(model_config)
+        self.sess.run(tf.global_variables_initializer())
+
+    def _init_train(self, model_config):
+        # init loss
+        v_coef = model_config.getfloat('value_coef')
+        max_grad_norm = model_config.getfloat('max_grad_norm')
+        alpha = model_config.getfloat('rmsp_alpha')
+        epsilon = model_config.getfloat('rmsp_epsilon')
+        gamma = model_config.getfloat('gamma')
+        self.trans_buffer_ls = []
         for i in range(self.n_agent):
-            n_s = n_s_ls[i]
-            n_a = n_a_ls[i]
-            name = 'agent' + str(i)
-            if policy == 'lstm':
-                n_lstm = model_config.getint('NUM_LSTM')
-                policy = LstmPolicy(n_s, n_a, n_step, i_thread, n_past, n_fc=n_fc,
-                                    n_lstm=n_lstm, discrete=discrete, name=name)
-            elif policy == 'cnn1':
-                n_filter = model_config.getint('NUM_FILTER')
-                m_filter = model_config.getint('SIZE_FILTER')
-                policy = Cnn1DPolicy(n_s, n_a, n_step, i_thread, n_past,
-                                     n_fc=n_fc, n_filter=n_filter,
-                                     m_filter=m_filter, discrete=discrete, name=name)
-            self.agents.append(policy)
-            self.names.append(policy.name)
-            if i_thread == -1:
-                policy.prepare_loss(None, None, v_coef, max_grad_norm, alpha, epsilon)
-                self.lrs.append(policy.lr)
-                self.optimizers.append(policy.optimizer)
-            self.trans_buffers.append(OnPolicyBuffer(gamma))
+            self.policy_ls[i].prepare_loss(v_coef, max_grad_norm, alpha, epsilon)
+            self.trans_buffer_ls.append(OnPolicyBuffer(gamma))
 
-        if (i_thread == -1) and (total_step > 0):
-            # global lr and entropy beta scheduler
-            self.lr_scheduler = Scheduler(lr_init, lr_min, total_step, decay=lr_decay)
-            self.beta_scheduler = Scheduler(beta_init, beta_min, total_step * beta_ratio,
-                                            decay=beta_decay)
-            self.saver = tf.train.Saver(max_to_keep=20)
-
-    def backward(self, sess, R_ls, cur_lr, cur_beta):
-        assert (self.i_thread >= 0), 'incorrect update on global network!'
-        discrete = self.agents[0].discrete
+    def backward(self, R_ls, summary_writer=None, global_step=None):
+        cur_lr = self.lr_scheduler.get(self.n_step)
+        cur_beta = self.beta_scheduler.get(self.n_step)
         for i in range(self.n_agent):
-            obs, acts, dones, Rs, Advs = self.trans_buffers[i].sample_transition(R_ls[i], discrete)
-            self.agents[i].backward(sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta)
+            obs, acts, dones, Rs, Advs = self.trans_buffer_ls[i].sample_transition(R_ls[i])
+            self.policy_ls[i].backward(self.sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
+                                       summary_writer=summary_writer, global_step=global_step)
 
-    def forward(self, i_agent, sess, ob, done, out_type='pv'):
-        assert (self.i_thread >= 0), 'cannot explore with global network!'
-        return self.agents[i_agent].forward(sess, ob, done, out_type)
+    def forward(self, obs, done, out_type='pv'):
+        if len(out_type) == 1:
+            out = []
+        elif len(out_type) == 2:
+            out1, out2 = [], []
+        for i in range(self.n_agent):
+            cur_out = self.policy_ls[i].forward(self.sess, obs[i], done, out_type)
+            if len(out_type) == 1:
+                out.append(cur_out)
+            else:
+                out1.append(cur_out[0])
+                out2.append(cur_out[1])
+        if len(out_type) == 1:
+            return out
+        else:
+            return out1, out2
 
-    def add_transition(self, i_agent, ob, action, reward, value, done):
+    def add_transition(self, obs, actions, rewards, values, done):
         if self.reward_norm:
-            reward /= self.reward_norm
-        self.trans_buffers[i_agent].add_transition(ob, action, reward, value, done)
-
+            rewards /= self.reward_norm
+        for i in range(self.n_agent):
+            self.trans_buffer_ls[i].add_transition(obs[i], actions[i],
+                                                   rewards[i], values[i], done)

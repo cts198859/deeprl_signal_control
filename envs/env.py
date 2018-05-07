@@ -25,13 +25,13 @@ class Node:
     def __init__(self, name, neighbor=[], control=False):
         self.control = control
         self.edge_in = []  # for reward
-        self.footprint = []
+        self.fingerprint = []
         self.ild_in = []  # for state
         self.ild_out = []  # for state
         self.name = name
         self.neighbor = neighbor
         self.num_state = 0
-        self.num_footprint = 0
+        self.num_fingerprint = 0
         self.state = []
         self.speed_mask = [] # speed is avg
 
@@ -51,6 +51,7 @@ class TrafficSimulator:
         self.output_path = output_path
         self.scenario = scenario
         self.coop_level = config.get('coop_level')
+        self.coop_gamma = config.getfloat('coop_gamma')
         self.is_record = is_record
         self.record_stats = record_stats
         self.cur_episode = 0
@@ -131,17 +132,23 @@ class TrafficSimulator:
                 state.append(self.nodes[node].state)
             elif self.coop_level == 'neighbor':
                 cur_state = [self.nodes[node].state]
-                # TODO: add neighbor's footprint
+                # include both states and fingerprints of neighbors
                 for nnode in self.nodes[node].neighbor:
-                    cur_state.append(self.nodes[nnode].state)
+                    # discount the neigboring states
+                    cur_state.append(self.nodes[nnode].state * self.coop_gamma)
+                    if self.nodes[nnode].control:
+                        # add fingerprint for control agents
+                        cur_state.append(self.nodes[nnode].fingerprint)
                 state.append(np.concatenate(cur_state))
 
         if self.coop_level == 'global':
             state = np.concatenate(state)
 
-        # clean up the state measurements
+        # clean up the state and fingerprint measurements
         for node in self.all_nodes:
             self.nodes[node].state = np.zeros(self.nodes[node].num_state)
+        for node in self.control_nodes:
+            self.nodes[node].fingerprint = np.zeros(self.nodes[node].num_fingerprint)
         return state
 
     def _init_nodes(self):
@@ -219,7 +226,9 @@ class TrafficSimulator:
             num_state = self.nodes[node].num_state
             if self.coop_level == 'neighbor':
                 for nnode in self.nodes[node].neighbor:
-                    num_state += self.nodes[nnode].num_footprint
+                    num_state += self.nodes[nnode].num_state
+                    if self.nodes[nnode].control:
+                        num_state += self.nodes[nnode].num_fingerprint
             self.n_s_ls.append(num_state)
         self.n_s = np.sum(np.array(self.n_s_ls))
 
@@ -280,8 +289,9 @@ class TrafficSimulator:
         for node in self.all_nodes:
             # prev action for yellow phase before each switch
             if self.nodes[node].control:
-                # TODO: add num_footprint
                 self.nodes[node].prev_action = -1
+                # fingerprint is previous policy[:-1]  
+                self.nodes[node].num_fingerprint = self.nodes[node].phase_num - 1
             num_state, speed_mask = self._get_cross_state_num(node)
             self.nodes[node].state = np.zeros(num_state)
             self.nodes[node].num_state = num_state
@@ -355,12 +365,29 @@ class TrafficSimulator:
 
         if self.is_record:
             action_str = ','.join([str(int(a)) for a in action])
+            reward_str = ','.join([str(r) for r in reward])
             cur_control = {'episode': self.cur_episode,
                            'step': self.cur_sec / self.control_interval_sec,
                            'action': action_str,
-                           'reward': reward}
+                           'reward': reward_str}
             self.control_data.append(cur_control)
+        global_reward = np.sum(reward) # for fair comparison
         if self.coop_level == 'global':
             reward = np.sum(reward)
+        elif self.coop_level == 'neighbor':
+            new_reward = []
+            for node, r in zip(self.control_nodes, reward):
+                cur_reward = r
+                for nnode in self.nodes[node].neighbor:
+                    # discount the neigboring reward
+                    if self.nodes[nnode].control:
+                        nnode_i = self.control_nodes.index(nnode)
+                        cur_reward += self.coop_gamma * reward[nnode_i]
+                new_reward.append(cur_reward)
+            reward = np.array(new_reward)
         # TODO: neighbor uses spatially discounted reward 
-        return state, reward, done
+        return state, reward, done, global_reward
+
+    def update_fingerprint(self, policy):
+        for node, pi in zip(self.control_nodes, policy):
+            self.nodes[node].fingerprint = np.array(pi)[:-1]

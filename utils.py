@@ -80,6 +80,7 @@ class Trainer():
         self.cur_step = 0
         self.global_counter = global_counter
         self.env = env
+        self.coop_level = self.env.coop_level
         self.model = model
         self.sess = self.model.sess
         self.n_step = self.model.n_step
@@ -99,9 +100,17 @@ class Trainer():
         done = prev_done
         for _ in range(self.n_step):
             policy, value = self.model.forward(ob, done)
-            action = np.random.choice(np.arange(len(policy)), p=policy)
-            next_ob, reward, done = self.env.step(action)
-            cum_reward += reward
+            # need to update fingerprint before calling step
+            if self.coop_level == 'neighbor':
+                self.env.update_fingerprint(policy)
+            if self.coop_level == 'global':
+                action = np.random.choice(np.arange(len(policy)), p=policy)
+            else:
+                action = []
+                for pi in policy:
+                    action.append(np.random.choice(np.arange(len(pi)), p=pi))
+            next_ob, reward, done, global_reward = self.env.step(action)
+            cum_reward += global_reward
             global_step = self.global_counter.next()
             self.cur_step += 1
             self.model.add_transition(ob, action, reward, value, done)
@@ -120,7 +129,7 @@ class Trainer():
             else:
                 ob = next_ob
         if done:
-            R = 0
+            R = 0 if self.coop_level == 'global' else [0] * self.model.n_agent
         else:
             R = self.model.forward(ob, False, 'v')
         return ob, done, R, cum_reward
@@ -156,9 +165,16 @@ class Tester(Trainer):
         rewards = []
         while True:
             policy = self.model.forward(ob, False, 'p')
-            action = np.argmax(np.array(policy))
-            next_ob, reward, done = self.env.step(action)
-            rewards.append(reward)
+            if self.coop_level == 'neighbor':
+                self.env.update_fingerprint(policy)
+            if self.coop_level == 'global':
+                action = np.argmax(np.array(policy))
+            else:
+                action = []
+                for pi in policy:
+                    action.append(np.argmax(np.array(pi)))
+            next_ob, reward, done, global_reward = self.env.step(action)
+            rewards.append(global_reward)
             if done:
                 break
             ob = next_ob

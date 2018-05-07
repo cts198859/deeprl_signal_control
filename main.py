@@ -4,7 +4,7 @@ import logging
 import tensorflow as tf
 import threading
 from envs.small_grid_env import SmallGridEnv
-from agents.models import A2C
+from agents.models import A2C, MultiA2C
 from utils import (Counter, Trainer, Tester,
                    init_dir, init_log, init_test_flag
                    )
@@ -56,7 +56,8 @@ def train():
         model = A2C(env.n_s, env.n_a, total_step,
                     config['MODEL_CONFIG'], seed=seed)
     else:
-        model = None
+        model = MultiA2C(env.n_s_ls, env.n_a_ls, total_step,
+                         config['MODEL_CONFIG'], seed=seed)
 
     threads = []
     summary_writer = tf.summary.FileWriter(dirs['log'])
@@ -87,6 +88,7 @@ def train():
     if in_test:
         test_env.terminate()
 
+    # TODO: post-training evaluation
 
 if __name__ == '__main__':
     train()
