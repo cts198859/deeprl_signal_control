@@ -62,13 +62,13 @@ class Policy:
         self._train = self.optimizer.apply_gradients(list(zip(grads, wts)))
         # monitor training
         summaries = []
-        summaries.append(tf.summary.scalar('loss/entropy_loss', entropy_loss))
-        summaries.append(tf.summary.scalar('loss/policy_loss', policy_loss))
-        summaries.append(tf.summary.scalar('loss/value_loss', value_loss))
-        summaries.append(tf.summary.scalar('loss/total_loss', self.loss))
-        summaries.append(tf.summary.scalar('train/lr', self.lr))
-        summaries.append(tf.summary.scalar('train/entropy_beta', self.entropy_coef))
-        summaries.append(tf.summary.scalar('train/gradnorm', self.grad_norm))
+        summaries.append(tf.summary.scalar('loss/%s_entropy_loss' % self.name, entropy_loss))
+        summaries.append(tf.summary.scalar('loss/%s_policy_loss' % self.name, policy_loss))
+        summaries.append(tf.summary.scalar('loss/%s_value_loss' % self.name, value_loss))
+        summaries.append(tf.summary.scalar('loss/%s_total_loss' % self.name, self.loss))
+        summaries.append(tf.summary.scalar('train/%s_lr' % self.name, self.lr))
+        summaries.append(tf.summary.scalar('train/%s_entropy_beta' % self.name, self.entropy_coef))
+        summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
         self.summary = tf.summary.merge(summaries)
 
 
