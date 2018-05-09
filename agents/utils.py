@@ -39,12 +39,12 @@ def norm_init(scale=DEFAULT_SCALE, mode=DEFAULT_MODE):
             n = 0.5 * (n_in + shape[-1])
         return (scale * a / np.sqrt(n)).astype(np.float32)
 
-DEFAULT_METHOD = norm_init
+DEFAULT_METHOD = ortho_init
 """
 layers
 """
 def conv(x, scope, n_out, f_size, stride=1, pad='VALID', f_size_w=None, act=tf.nn.relu,
-         conv_dim=1, init_scale=DEFAULT_SCALE, init_mode=None, init_method=ortho_init):
+         conv_dim=1, init_scale=DEFAULT_SCALE, init_mode=None, init_method=DEFAULT_METHOD):
     with tf.variable_scope(scope):
         b = tf.get_variable("b", [n_out], initializer=tf.constant_initializer(0.0))
         if conv_dim == 1:
@@ -212,10 +212,13 @@ class OnPolicyBuffer(TransBuffer):
         self.Rs = Rs
         self.Advs = Advs
 
-    def sample_transition(self, R):
+    def sample_transition(self, R, discrete=True):
         self._add_R_Adv(R)
         obs = np.array(self.obs, dtype=np.float32)
-        acts = np.array(self.acts, dtype=np.int16)
+        if discrete:
+            acts = np.array(self.acts, dtype=np.int32)
+        else:
+            acts = np.array(self.acts, dtype=np.float32)
         Rs = np.array(self.Rs, dtype=np.float32)
         Advs = np.array(self.Advs, dtype=np.float32)
         # use pre-step dones here
@@ -228,7 +231,7 @@ class OnPolicyBuffer(TransBuffer):
 util functions
 """
 class Scheduler:
-    def __init__(self, val_init, val_min, total_step, decay='linear'):
+    def __init__(self, val_init, val_min=0, total_step=0, decay='linear'):
         self.val = val_init
         self.N = float(total_step)
         self.val_min = val_min
@@ -241,6 +244,7 @@ class Scheduler:
             return max(self.val_min, self.val * (1 - self.n / self.N))
         else:
             return self.val
+
 
 if __name__ == '__main__':
     test_layers()

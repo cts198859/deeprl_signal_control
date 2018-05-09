@@ -1,0 +1,22 @@
+<edges>
+  <edge id="e:np1,nt1" from="np1" to="nt1" type="a"/>
+  <edge id="e:np2,nt1" from="np2" to="nt1" type="a"/>
+  <edge id="e:np3,nt1" from="np3" to="nt1" type="a"/>
+  <edge id="e:np8,nt4" from="np8" to="nt4" type="a"/>
+  <edge id="e:np9,nt4" from="np9" to="nt4" type="a"/>
+  <edge id="e:nt1,nt2" from="nt1" to="nt2" type="a"/>
+  <edge id="e:nt1,npc" from="nt1" to="npc" type="a"/>
+  <edge id="e:nt1,nt6" from="nt1" to="nt6" type="a"/>
+  <edge id="e:npc,nt3" from="npc" to="nt3" type="a"/>
+  <edge id="e:npc,nt5" from="npc" to="nt5" type="a"/>
+  <edge id="e:nt5,nt6" from="nt5" to="nt6" type="a"/>
+  <edge id="e:nt4,nt3" from="nt4" to="nt3" type="a"/>
+  <edge id="e:nt4,nt5" from="nt4" to="nt5" type="a"/>
+  <edge id="e:nt3,nt2" from="nt3" to="nt2" type="a"/>
+  <edge id="e:nt6,np12" from="nt6" to="np12" type="a"/>
+  <edge id="e:nt6,np13" from="nt6" to="np13" type="a"/>
+  <edge id="e:nt2,np4" from="nt2" to="np4" type="a"/>
+  <edge id="e:nt2,np5" from="nt2" to="np5" type="a"/>
+  <edge id="e:nt5,np11" from="nt5" to="np11" type="a"/>
+  <edge id="e:nt3,np6" from="nt3" to="np6" type="a"/>
+</edges>

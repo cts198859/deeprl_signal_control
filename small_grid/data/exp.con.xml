@@ -1,0 +1,33 @@
+<connections>
+  <connection from="e:np1,nt1" to="e:nt1,nt2" fromLane="0" toLane="0"/>
+  <connection from="e:np1,nt1" to="e:nt1,nt6" fromLane="0" toLane="0"/>
+  <connection from="e:np1,nt1" to="e:nt1,npc" fromLane="0" toLane="0"/>
+  <connection from="e:np2,nt1" to="e:nt1,nt2" fromLane="0" toLane="0"/>
+  <connection from="e:np2,nt1" to="e:nt1,nt6" fromLane="0" toLane="0"/>
+  <connection from="e:np2,nt1" to="e:nt1,npc" fromLane="0" toLane="0"/>
+  <connection from="e:np3,nt1" to="e:nt1,nt2" fromLane="0" toLane="0"/>
+  <connection from="e:np3,nt1" to="e:nt1,nt6" fromLane="0" toLane="0"/>
+  <connection from="e:np3,nt1" to="e:nt1,npc" fromLane="0" toLane="0"/>
+  <connection from="e:np8,nt4" to="e:nt4,nt3" fromLane="0" toLane="0"/>
+  <connection from="e:np8,nt4" to="e:nt4,nt5" fromLane="0" toLane="0"/>
+  <connection from="e:np9,nt4" to="e:nt4,nt3" fromLane="0" toLane="0"/>
+  <connection from="e:np9,nt4" to="e:nt4,nt5" fromLane="0" toLane="0"/>
+  <connection from="e:nt1,npc" to="e:npc,nt3" fromLane="0" toLane="0"/>
+  <connection from="e:nt1,npc" to="e:npc,nt5" fromLane="0" toLane="0"/>
+  <connection from="e:nt1,nt2" to="e:nt2,np4" fromLane="0" toLane="0"/>
+  <connection from="e:nt1,nt2" to="e:nt2,np5" fromLane="0" toLane="0"/>
+  <connection from="e:nt3,nt2" to="e:nt2,np4" fromLane="0" toLane="0"/>
+  <connection from="e:nt3,nt2" to="e:nt2,np5" fromLane="0" toLane="0"/>
+  <connection from="e:nt1,nt6" to="e:nt6,np12" fromLane="0" toLane="0"/>
+  <connection from="e:nt1,nt6" to="e:nt6,np13" fromLane="0" toLane="0"/>
+  <connection from="e:nt5,nt6" to="e:nt6,np12" fromLane="0" toLane="0"/>
+  <connection from="e:nt5,nt6" to="e:nt6,np13" fromLane="0" toLane="0"/>
+  <connection from="e:npc,nt3" to="e:nt3,np6" fromLane="0" toLane="0"/>
+  <connection from="e:npc,nt3" to="e:nt3,nt2" fromLane="0" toLane="0"/>
+  <connection from="e:nt4,nt3" to="e:nt3,np6" fromLane="0" toLane="0"/>
+  <connection from="e:nt4,nt3" to="e:nt3,nt2" fromLane="0" toLane="0"/>
+  <connection from="e:npc,nt5" to="e:nt5,np11" fromLane="0" toLane="0"/>
+  <connection from="e:npc,nt5" to="e:nt5,nt6" fromLane="0" toLane="0"/>
+  <connection from="e:nt4,nt5" to="e:nt5,np11" fromLane="0" toLane="0"/>
+  <connection from="e:nt4,nt5" to="e:nt5,nt6" fromLane="0" toLane="0"/>
+</connections>

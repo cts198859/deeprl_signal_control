@@ -1,0 +1,11 @@
+<configuration>
+  <input>
+    <net-file value="exp.net.xml"/>
+    <route-files value="exp.rou.xml"/>
+    <additional-files value="exp.add.xml"/>
+  </input>
+  <time>
+    <begin value="0"/>
+    <end value="7200"/>
+  </time>
+</configuration>
