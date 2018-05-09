@@ -1,6 +1,7 @@
 import os
 from agents.utils import *
 from agents.policies import *
+import logging
 
 
 class A2C:
@@ -98,9 +99,10 @@ class A2C:
                 save_file = 'checkpoint-' + str(int(checkpoint))
         if save_file is not None:
             self.saver.restore(sess, model_dir + save_file)
-            print('checkpoint loaded: ', save_file)
-        else:
-            print('could not find old checkpoint')
+            logging.info('Checkpoint loaded: %s' % save_file)
+            return True
+        logging.error('Can not find old checkpoint for %s' % model_dir)
+        return False
 
     def backward(self, R, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)

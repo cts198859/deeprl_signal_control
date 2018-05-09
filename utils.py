@@ -4,13 +4,33 @@ import numpy as np
 import tensorflow as tf
 import time
 import os
+import subprocess
 
 
-def init_dir(base_dir):
+def check_dir(cur_dir):
+    if not os.path.exists(cur_dir):
+        return False
+    return True
+
+
+def copy_file(src_dir, tar_dir):
+    cmd = 'cp %s %s' % (src_dir, tar_dir)
+    subprocess.check_call(cmd, shell=True)
+
+
+def find_file(cur_dir, suffix='.ini'):
+    for file in os.listdir(cur_dir):
+        if file.endswith(suffix):
+            return cur_dir + '/' + file
+    logging.error('Cannot find %s file' % suffix)
+    return None
+
+
+def init_dir(base_dir, pathes=['log', 'data', 'model']):
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
     dirs = {}
-    for path in ['log', 'data', 'model', 'plot']:
+    for path in pathes:
         cur_dir = base_dir + '/%s/' % path
         if not os.path.exists(cur_dir):
             os.mkdir(cur_dir)
@@ -37,6 +57,13 @@ def init_test_flag(test_mode):
     if test_mode == 'all_test':
         return True, True
     return False, False
+
+
+def plot_train(data_dirs, labels):
+    pass
+
+def plot_evaluation(data_dirs, labels):
+    pass
 
 
 class Counter:
@@ -185,7 +212,21 @@ class Tester(Trainer):
         total_reward = np.mean(np.array(rewards))
         return total_reward
 
-    def run(self, coord):
+    def run_offline(self, output_path):
+        # enable traffic measurments for offline test
+        is_record = True
+        record_stats = False
+        self.env.cur_episode = 0
+        self.env.init_data(is_record, record_stats, output_path)
+        rewards = []
+        for test_ind in range(self.test_num):
+            rewards.append(self.perform(test_ind))
+        avg_reward = np.mean(np.array(rewards))
+        logging.info('Offline testing: avg R: %.2f' % avg_reward)
+        self.env.output_data()
+
+    def run_online(self, coord):
+        self.env.cur_episode = 0
         while not coord.should_stop():
             time.sleep(30)
             if self.global_counter.should_test():
@@ -198,4 +239,7 @@ class Tester(Trainer):
                 logging.info('Testing: global step %d, avg R: %.2f' %
                              (global_step, avg_reward))
                 # self.global_counter.update_test(avg_reward)
-        
+
+class Evaluator:
+    def __init__(self, env, model, metrics):
+        pass

@@ -48,12 +48,9 @@ class TrafficSimulator:
         self.sim_thread = port
         self.obj = config.get('objective')
         self.data_path = config.get('data_path')
-        self.output_path = output_path
         self.scenario = scenario
         self.coop_level = config.get('coop_level')
         self.coop_gamma = config.getfloat('coop_gamma')
-        self.is_record = is_record
-        self.record_stats = record_stats
         self.cur_episode = 0
         self.norm_car_num = config.getfloat('norm_car_num')
         self.norm_car_speed = config.getfloat('norm_car_speed')
@@ -61,17 +58,12 @@ class TrafficSimulator:
         self.clip_car_speed = config.getfloat('clip_car_speed')
         self.train_mode = True
         test_seeds = config.get('test_seeds').split(',')
-        self.test_num = len(test_seeds)
-        self.test_seeds = [int(s) for s in test_seeds]
+        test_seeds = [int(s) for s in test_seeds]
         self._init_map()
         self._init_sim()
         self._init_nodes()
-        if self.is_record:
-            self.traffic_data = []
-            self.control_data = []
-        if self.record_stats:
-            self.car_num_stat = []
-            self.car_speed_stat = []
+        self.init_data(is_record, record_stats, output_path)
+        self.init_test_seeds(test_seeds)
 
     def _get_cross_phase(self, action, node, phase_type):
         phase_num = self.nodes[node].phase_num
@@ -204,6 +196,13 @@ class TrafficSimulator:
         self.state_mean_masks = None
         raise NotImplementedError()
 
+    def _init_policy(self):
+        policy = []
+        for node in self.control_nodes:
+            p = 1. / self.nodes[node].phase_num
+            policy.append(np.array([p] * self.nodes[node].phase_num))
+        return policy
+
     def _init_sim(self):
         sumocfg_file = self._init_sim_config()
         command = [checkBinary('sumo'), '-c', sumocfg_file]
@@ -326,6 +325,21 @@ class TrafficSimulator:
         action_ls.append(action)
         return action_ls
 
+    def init_data(self, is_record, record_stats, output_path):
+        self.is_record = is_record
+        self.record_stats = record_stats
+        self.output_path = output_path
+        if self.is_record:
+            self.traffic_data = []
+            self.control_data = []
+        if self.record_stats:
+            self.car_num_stat = []
+            self.car_speed_stat = []
+
+    def init_test_seeds(self, test_seeds):
+        self.test_num = len(test_seeds)
+        self.test_seeds = test_seeds
+
     def output_data(self):
         if not self.is_record:
             logging.error('Env: no record to output!')
@@ -344,6 +358,9 @@ class TrafficSimulator:
         self.seed += 10
         self.cur_sec = 0
         self.cur_episode += 1
+        # initialize fingerprint
+        if self.coop_level == 'neighbor':
+            self.update_fingerprint(self._init_policy())
         return self._get_state()
 
     def terminate(self):
