@@ -29,7 +29,7 @@ python3 main.py --base-dir [base_dir] train --config-dir [config_dir] --test-mod
 
 To evaluate and compare trained agents, run
 ~~~
-python3 main.py --base-dir [base_dir] train --agents [agent names] --evaluate-metrics num_arrival_car --evaluate-seeds [seeds]
+python3 main.py --base-dir [base_dir] evaluate --agents [agent names] --evaluate-metrics num_arrival_car --evaluate-seeds [seeds]
 ~~~
 Evaluation metrics is the actual objective, and make sure evaluation seeds are different from those used in training/testing.
 
