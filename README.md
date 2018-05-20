@@ -27,6 +27,11 @@ python3 main.py --base-dir [base_dir] train --config-dir [config_dir] --test-mod
 ~~~
 `no_test` is suggested if no testing is needed during training, since it is time-consuming.
 
+To access tensorboard during training, run
+~~~
+tensorboard --logdir=[base_dir]/log
+~~~
+
 To evaluate and compare trained agents, run
 ~~~
 python3 main.py --base-dir [base_dir] evaluate --agents [agent names] --evaluate-metrics num_arrival_car --evaluate-seeds [seeds]

@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import seaborn as sns
+import time
 from envs.env import Phase, TrafficSimulator
 from small_grid.data.build_file import gen_rou_file
 
@@ -36,7 +37,7 @@ class SmallGridPhase(Phase):
         self.phases = {2: two_phase, 3: three_phase}
 
 
-class NaiveController:
+class SmallGridController:
     def __init__(self, num_node_3phase=1, num_node_2phase=5, switch_step=2):
         self.phase_3 = 0
         self.phase_2 = 0
@@ -101,18 +102,21 @@ def plot_cdf(X, c='b', label=None):
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
-    config.read('./config/config.ini')
+    config.read('./config/config_local.ini')
     base_dir = './output_result/'
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
-    env = SmallGridEnv(config['ENV_CONFIG'], 0, base_dir, is_record=False, record_stat=True)
+    env = SmallGridEnv(config['ENV_CONFIG'], 0, base_dir, is_record=True, record_stat=True)
     env.reset()
-    controller = NaiveController()
+    controller = SmallGridController()
     rewards = []
     while True:
-        _, reward, done = env.step(controller.act())
+        _, reward, done, _ = env.step(controller.act())
         rewards.append(np.mean(reward))
         if done:
             break
     env.plot_stat(np.array(rewards))
     env.terminate()
+    time.sleep(2)
+    env.collect_tripinfo()
+    env.output_data()

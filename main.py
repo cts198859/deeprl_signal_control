@@ -3,14 +3,12 @@ import configparser
 import logging
 import tensorflow as tf
 import threading
-from envs.small_grid_env import SmallGridEnv
+from envs.small_grid_env import SmallGridEnv, SmallGridController 
 from agents.models import A2C, MultiA2C
 from utils import (Counter, Trainer, Tester, Evaluator,
                    check_dir, copy_file, find_file,
                    init_dir, init_log, init_test_flag,
                    plot_evaluation, plot_train)
-
-AGENTS = {'global': 'A2C', 'local': 'IA2C', 'neighbor': 'MA2C'}
 
 def parse_args():
     default_base_dir = '/rl_test/small_grid/global'
@@ -28,18 +26,28 @@ def parse_args():
                     default=default_config_dir, help="experiment config path")
     sp = subparsers.add_parser('evaluate', help="evaluate and compare agents under base dir")
     sp.add_argument('--agents', type=str, required=False,
-                    default='', help="agent folder names for evaluation, split by ,")
-    sp.add_argument('--evaluate-metrics', type=str, required=False,
-                    default='num_arrival_car',
-                    help="cumulative evaluation metrics over planning horizon",
-                    choices=['num_arrival_car', 'trip_waiting_time', 'trip_total_time'])
+                    default='naive', help="agent folder names for evaluation, split by ,")
     sp.add_argument('--evaluate-seeds', type=str, required=False,
-                    default='', help="random seeds for evaluation, split by ,")
+                    default=','.join([str(i) for i in range(10000, 100001, 10000)]),
+                    help="random seeds for evaluation, split by ,")
     args = parser.parse_args()
     if not args.option:
         parser.print_help()
         exit(1)
     return args
+
+
+def init_env(config, port=0, naive_policy=False):
+    if config.get('scenario') == 'small_grid':
+        if not naive_policy:
+            return SmallGridEnv(config, port=port)
+        else:
+            return SmallGridEnv(config, port=port), SmallGridController()
+    else:
+        if not naive_policy:
+            return None
+        else:
+            return None, None
 
 
 def train(args):
@@ -53,7 +61,7 @@ def train(args):
     in_test, post_test = init_test_flag(args.test_mode)
 
     # init env
-    env = SmallGridEnv(config['ENV_CONFIG'], port=0)
+    env = init_env(config['ENV_CONFIG'])
     logging.info('Training: s dim: %d, a dim %d, s dim ls: %r, a dim ls: %r' %
                  (env.n_s, env.n_a, env.n_s_ls, env.n_a_ls))
 
@@ -79,7 +87,7 @@ def train(args):
     trainer = Trainer(env, model, global_counter, summary_writer)
     if in_test or post_test:
         # assign a different port for test env
-        test_env = SmallGridEnv(config['ENV_CONFIG'], port=1)
+        test_env = init_env(config['ENV_CONFIG'], port=1)
         tester = Tester(test_env, model, global_counter, summary_writer)
 
     def train_fn():
@@ -104,62 +112,64 @@ def train(args):
     final_step = global_counter.cur_step
     logging.info('Training: save final model at step %d ...' % final_step)
     model.save(dirs['model'], final_step)
-    env.terminate()
-    if in_test or post_test:
-        test_env.terminate()
 
 
-def evaluate(args):
-    base_dir = args.base_dir
-    dirs = init_dir(base_dir, pathes=['eva_data', 'eva_log', 'eva_plot'])
-    init_log(dirs['eva_log'])
-    agents = args.agents.split(',')
-    seeds = args.evaluate_seeds.split(',')
-    seeds = [int(s) for s in seeds]
-    train_data_dirs = []
-    eva_data_dirs = []
-    train_labels = []
-    eva_labels = []
-    for agent in agents:
-        cur_dir = base_dir + '/' + agent
-        if not check_dir(cur_dir):
-            logging.error('%s does not exist!' % agent)
-            continue
-        config_dir = find_file(cur_dir + '/data')
-        if not config_dir:
-            continue
-        config = configparser.ConfigParser()
-        config.read(config_dir)
+def evaluate_fn(agent_dir, output_dir, seeds, port):
+    # load config file for env
+    config_dir = find_file(agent_dir + '/data')
+    if not config_dir:
+        return
+    config = configparser.ConfigParser()
+    config.read(config_dir)
 
-        # collect training data
-        train_data_dir = find_file(cur_dir + '/data', suffix='train_reward.csv')
-        if train_data_dir:
-            train_data_dirs.append(train_data_dir)
-            train_labels.append(AGENTS[agent])
-        # init env
-        env = SmallGridEnv(config['ENV_CONFIG'], port=0)
-        logging.info('Evaluation: s dim: %d, a dim %d, s dim ls: %r, a dim ls: %r' %
-                     (env.n_s, env.n_a, env.n_s_ls, env.n_a_ls))
-        # enforce the same evaluation seeds across agents
-        env.init_test_seeds(seeds)
+    # init env
+    env, naive_policy = init_env(config['ENV_CONFIG'], port=port, naive_policy=True)
+    logging.info('Evaluation: s dim: %d, a dim %d, s dim ls: %r, a dim ls: %r' %
+                 (env.n_s, env.n_a, env.n_s_ls, env.n_a_ls))
+    env.init_test_seeds(seeds)
 
+    # load model for agent
+    agent = agent_dir.split('/')[-1]
+    if agent != 'naive':
+        if not check_dir(agent_dir):
+            logging.error('Evaluation: %s does not exist!' % agent)
+            return
         # init centralized or multi agent
         if env.coop_level == 'global':
             model = A2C(env.n_s, env.n_a, 0, config['MODEL_CONFIG'])
         else:
             model = MultiA2C(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'])
-        if not model.load(cur_dir + '/model'):
-            continue
+        if not model.load(agent_dir + '/model'):
+            return
+    else:
+        model = naive_policy
 
-        # collect evaluation data
-        evaluator = Evaluator(env, model, args.evaluate_metrics)
-        eva_data_dirs.append(evaluator.run())
-        eva_labels.append(AGENTS[agent])
+    # collect evaluation data
+    evaluator = Evaluator(env, model, output_dir)
+    evaluator.run()
 
-    if len(train_data_dirs):
-        plot_train(train_data_dirs, train_labels)
-    if len(eva_data_dirs):
-        plot_evaluation(eva_data_dirs, eva_labels)
+
+def evaluate(args):
+    base_dir = args.base_dir
+    dirs = init_dir(base_dir, pathes=['eva_data', 'eva_log'])
+    init_log(dirs['eva_log'])
+    agents = args.agents.split(',')
+    # enforce the same evaluation seeds across agents
+    seeds = args.evaluate_seeds
+    logging.info('Evaluation: random seeds: %s' % seeds)
+    if not seeds:
+        seeds = []
+    else:
+        seeds = [int(s) for s in seeds.split(',')]
+    threads = []
+    for i, agent in enumerate(agents):
+        agent_dir = base_dir + '/' + agent
+        thread = threading.Thread(target=evaluate_fn,
+                                  args=(agent_dir, dirs['eva_data'], seeds, i))
+        thread.start()
+        threads.append(thread)
+    for thread in threads:
+        thread.join()
 
 
 if __name__ == '__main__':
