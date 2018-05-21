@@ -154,6 +154,7 @@ class Trainer():
                               str(ob), str(action), str(policy), global_value, global_reward, done))
             # termination
             if done:
+                self.env.terminate()
                 ob = self.env.reset()
                 self._add_summary(cum_reward / float(self.cur_step), global_step)
                 cum_reward = 0
@@ -176,6 +177,7 @@ class Trainer():
             self.model.backward(R, self.summary_writer, global_step)
             self.summary_writer.flush()
             if (self.global_counter.should_stop()) and (not coord.should_stop()):
+                self.env.terminate()
                 coord.request_stop()
                 logging.info('Training: stop condition reached!')
                 return
@@ -196,15 +198,18 @@ class Tester(Trainer):
         ob = self.env.reset(test_ind=test_ind)
         rewards = []
         while True:
-            policy = self.model.forward(ob, False, 'p')
-            if self.coop_level == 'neighbor':
-                self.env.update_fingerprint(policy)
-            if self.coop_level == 'global':
-                action = np.argmax(np.array(policy))
+            if self.coop_level != 'naive':
+                policy = self.model.forward(ob, False, 'p')
+                if self.coop_level == 'neighbor':
+                    self.env.update_fingerprint(policy)
+                if self.coop_level == 'global':
+                    action = np.argmax(np.array(policy))
+                else:
+                    action = []
+                    for pi in policy:
+                        action.append(np.argmax(np.array(pi)))
             else:
-                action = []
-                for pi in policy:
-                    action.append(np.argmax(np.array(pi)))
+                action = self.model.forward(ob)
             next_ob, reward, done, global_reward = self.env.step(action)
             rewards.append(global_reward)
             if done:
@@ -222,6 +227,9 @@ class Tester(Trainer):
         rewards = []
         for test_ind in range(self.test_num):
             rewards.append(self.perform(test_ind))
+            self.env.terminate()
+            time.sleep(2)
+            self.env.collect_tripinfo()
         avg_reward = np.mean(np.array(rewards))
         logging.info('Offline testing: avg R: %.2f' % avg_reward)
         self.env.output_data()
@@ -234,6 +242,7 @@ class Tester(Trainer):
                 rewards = []
                 for test_ind in range(self.test_num):
                     rewards.append(self.perform(test_ind))
+                    self.env.terminate()
                 avg_reward = np.mean(np.array(rewards))
                 global_step = self.global_counter.cur_step
                 self._add_summary(avg_reward, global_step)
@@ -241,6 +250,25 @@ class Tester(Trainer):
                              (global_step, avg_reward))
                 # self.global_counter.update_test(avg_reward)
 
-class Evaluator:
-    def __init__(self, env, model, metrics):
-        pass
+class Evaluator(Tester):
+    def __init__(self, env, model, output_path):
+        self.env = env
+        self.model = model
+        if self.model.name == 'naive':
+            self.env.coop_level = 'naive'
+        self.coop_level = self.env.coop_level
+        self.env.train_mode = False
+        self.test_num = self.env.test_num
+        self.output_path = output_path
+
+    def run(self):
+        is_record = True
+        record_stats = False
+        self.env.cur_episode = 0
+        self.env.init_data(is_record, record_stats, self.output_path)
+        for test_ind in range(self.test_num):
+            self.perform(test_ind)
+            self.env.terminate()
+            time.sleep(2)
+            self.env.collect_tripinfo()
+        self.env.output_data()
