@@ -198,15 +198,18 @@ class Tester(Trainer):
         ob = self.env.reset(test_ind=test_ind)
         rewards = []
         while True:
-            policy = self.model.forward(ob, False, 'p')
-            if self.coop_level == 'neighbor':
-                self.env.update_fingerprint(policy)
-            if self.coop_level == 'global':
-                action = np.argmax(np.array(policy))
+            if self.coop_level != 'naive':
+                policy = self.model.forward(ob, False, 'p')
+                if self.coop_level == 'neighbor':
+                    self.env.update_fingerprint(policy)
+                if self.coop_level == 'global':
+                    action = np.argmax(np.array(policy))
+                else:
+                    action = []
+                    for pi in policy:
+                        action.append(np.argmax(np.array(pi)))
             else:
-                action = []
-                for pi in policy:
-                    action.append(np.argmax(np.array(pi)))
+                action = self.model.forward(ob)
             next_ob, reward, done, global_reward = self.env.step(action)
             rewards.append(global_reward)
             if done:
@@ -250,8 +253,10 @@ class Tester(Trainer):
 class Evaluator(Tester):
     def __init__(self, env, model, output_path):
         self.env = env
-        self.coop_level = self.env.coop_level
         self.model = model
+        if self.model.name == 'naive':
+            self.env.coop_level = 'naive'
+        self.coop_level = self.env.coop_level
         self.env.train_mode = False
         self.test_num = self.env.test_num
         self.output_path = output_path

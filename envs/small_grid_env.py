@@ -18,6 +18,8 @@ SMALL_GRID_NEIGHBOR_MAP = {'nt1': ['npc', 'nt2', 'nt6'],
 
 STATE_MEAN_MASKS = {'in_car': False, 'in_speed': True, 'out_car': False}
 STATE_NAMES = ['in_car', 'in_speed', 'out_car']
+STATE_PHASE_MAP = {'nt1': [0, 1, 2], 'nt2': [1, 0], 'nt3': [1, 0],
+                   'nt4': [1, 0], 'nt5': [1, 0], 'nt6': [1, 0]}
 
 
 class SmallGridPhase(Phase):
@@ -37,8 +39,9 @@ class SmallGridPhase(Phase):
         self.phases = {2: two_phase, 3: three_phase}
 
 
-class SmallGridController:
+class FixedController:
     def __init__(self, num_node_3phase=1, num_node_2phase=5, switch_step=2):
+        self.name = 'naive'
         self.phase_3 = 0
         self.phase_2 = 0
         self.num_3 = num_node_3phase
@@ -47,7 +50,7 @@ class SmallGridController:
         self.step_3 = switch_step
         self.step_2 = switch_step
 
-    def act(self, state=None):
+    def forward(self, ob=None, done=False, output_type=''):
         if not self.step_3:
             self.phase_3 = (self.phase_3 + 1) % 3
             self.step_3 = self.switch_step - 1
@@ -60,8 +63,24 @@ class SmallGridController:
             self.step_2 -= 1
         return np.array([self.phase_3] * self.num_3 + [self.phase_2] * self.num_2)
 
-    def explore(self, state=None):
-        return self.act()
+
+class SmallGridController:
+    def __init__(self, nodes):
+        self.name = 'naive'
+        self.nodes = nodes
+        self.phase = SmallGridPhase()
+
+    def forward(self, obs):
+        actions = []
+        for ob, node in zip(obs, self.nodes):
+            actions.append(self.greedy(ob, node))
+        return actions
+
+    def greedy(self, ob, node):
+        # hard code the mapping from state to number of cars
+        phases = STATE_PHASE_MAP[node]
+        in_cars = ob[:len(phases)]
+        return phases[np.argmax(in_cars)]
 
 
 class SmallGridEnv(TrafficSimulator):
@@ -107,14 +126,15 @@ if __name__ == '__main__':
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
     env = SmallGridEnv(config['ENV_CONFIG'], 0, base_dir, is_record=True, record_stat=True)
-    env.reset()
+    ob = env.reset()
     controller = SmallGridController()
     rewards = []
     while True:
-        _, reward, done, _ = env.step(controller.act())
+        next_ob, reward, done, _ = env.step(controller.forward(ob))
         rewards.append(np.mean(reward))
         if done:
             break
+        ob = next_ob
     env.plot_stat(np.array(rewards))
     env.terminate()
     time.sleep(2)

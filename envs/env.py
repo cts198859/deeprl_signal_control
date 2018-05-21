@@ -120,9 +120,9 @@ class TrafficSimulator:
 
         # get the state vectors
         for node in self.control_nodes:
-            if (self.coop_level == 'global') or (self.coop_level == 'local'):
+            if self.coop_level != 'neighbor':
                 state.append(self.nodes[node].state)
-            elif self.coop_level == 'neighbor':
+            else:
                 cur_state = [self.nodes[node].state]
                 # include both states and fingerprints of neighbors
                 for nnode in self.nodes[node].neighbor:
@@ -203,9 +203,13 @@ class TrafficSimulator:
             policy.append(np.array([p] * self.nodes[node].phase_num))
         return policy
 
-    def _init_sim(self):
+    def _init_sim(self, gui=False):
         sumocfg_file = self._init_sim_config()
-        command = [checkBinary('sumo'), '-c', sumocfg_file]
+        if gui:
+            app = 'sumo-gui'
+        else:
+            app = 'sumo'
+        command = [checkBinary(app), '-c', sumocfg_file]
         command += ['--seed', str(self.seed)]
         command += ['--remote-port', str(self.port)]
         command += ['--no-step-log', 'True']
@@ -214,7 +218,8 @@ class TrafficSimulator:
         command += ['--duration-log.disable', 'True']
         # collect trip info if necessary
         if self.is_record:
-            command += ['--tripinfo-output', self.output_path + 'trip.xml']
+            command += ['--tripinfo-output',
+                        self.output_path + ('%s_%s_trip.xml' % (self.name, self.coop_level))]
         subprocess.Popen(command)
         self.sim = traci.connect(port=self.port)
 
@@ -333,8 +338,8 @@ class TrafficSimulator:
 
     def collect_tripinfo(self):
         # read trip xml, has to be called externally to get complete file
-        self.output_path + 'trip.xml'
-        tree = ET.ElementTree(file=(self.output_path + 'trip.xml'))
+        trip_file = self.output_path + ('%s_%s_trip.xml' % (self.name, self.coop_level))
+        tree = ET.ElementTree(file=trip_file)
         for child in tree.getroot():
             cur_trip = child.attrib
             cur_dict = {}
@@ -347,7 +352,7 @@ class TrafficSimulator:
             cur_dict['wait_sec'] = cur_trip['timeLoss']
             self.trip_data.append(cur_dict)
         # delete the current xml
-        cmd = 'rm ' + self.output_path + 'trip.xml'
+        cmd = 'rm ' + trip_file
         subprocess.check_call(cmd, shell=True)
 
     def init_data(self, is_record, record_stats, output_path):
@@ -381,6 +386,7 @@ class TrafficSimulator:
         self._reset_state()
         if not self.train_mode:
             self.seed = self.test_seeds[test_ind]
+        # self._init_sim(gui=True)
         self._init_sim()
         # next environment random condition should be different
         self.seed += 10

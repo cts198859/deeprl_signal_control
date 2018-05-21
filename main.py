@@ -42,7 +42,9 @@ def init_env(config, port=0, naive_policy=False):
         if not naive_policy:
             return SmallGridEnv(config, port=port)
         else:
-            return SmallGridEnv(config, port=port), SmallGridController()
+            env = SmallGridEnv(config, port=port)
+            policy = SmallGridController(env.control_nodes)
+            return env, policy
     else:
         if not naive_policy:
             return None
@@ -115,8 +117,12 @@ def train(args):
 
 
 def evaluate_fn(agent_dir, output_dir, seeds, port):
+    agent = agent_dir.split('/')[-1]
+    if not check_dir(agent_dir):
+        logging.error('Evaluation: %s does not exist!' % agent)
+        return
     # load config file for env
-    config_dir = find_file(agent_dir + '/data')
+    config_dir = find_file(agent_dir)
     if not config_dir:
         return
     config = configparser.ConfigParser()
@@ -129,17 +135,13 @@ def evaluate_fn(agent_dir, output_dir, seeds, port):
     env.init_test_seeds(seeds)
 
     # load model for agent
-    agent = agent_dir.split('/')[-1]
     if agent != 'naive':
-        if not check_dir(agent_dir):
-            logging.error('Evaluation: %s does not exist!' % agent)
-            return
         # init centralized or multi agent
         if env.coop_level == 'global':
             model = A2C(env.n_s, env.n_a, 0, config['MODEL_CONFIG'])
         else:
             model = MultiA2C(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'])
-        if not model.load(agent_dir + '/model'):
+        if not model.load(agent_dir + '/'):
             return
     else:
         model = naive_policy
