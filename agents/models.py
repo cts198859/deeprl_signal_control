@@ -7,6 +7,7 @@ import logging
 class A2C:
     def __init__(self, n_s, n_a, total_step, model_config, seed=0):
         # load parameters
+        self.name = 'a2c'
         self.n_agent = 1
         self.reward_clip = model_config.getfloat('reward_clip')
         self.reward_norm = model_config.getfloat('reward_norm')
@@ -98,7 +99,7 @@ class A2C:
             else:
                 save_file = 'checkpoint-' + str(int(checkpoint))
         if save_file is not None:
-            self.saver.restore(sess, model_dir + save_file)
+            self.saver.restore(self.sess, model_dir + save_file)
             logging.info('Checkpoint loaded: %s' % save_file)
             return True
         logging.error('Can not find old checkpoint for %s' % model_dir)
@@ -125,6 +126,7 @@ class A2C:
 class MultiA2C(A2C):
     def __init__(self, n_s_ls, n_a_ls, total_step,
                  model_config, seed=0):
+        self.name = 'ma2c'
         self.agents = []
         self.n_agent = len(n_s_ls)
         self.reward_clip = model_config.getfloat('reward_clip')

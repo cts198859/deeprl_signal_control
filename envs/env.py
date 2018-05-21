@@ -8,9 +8,10 @@ import pandas as pd
 import subprocess
 from sumolib import checkBinary
 import traci
+import xml.etree.cElementTree as ET
 
 DEFAULT_PORT = 8000
-
+SEC_IN_MS = 1000
 
 class Phase:
     def __init__(self):
@@ -38,8 +39,7 @@ class Node:
 
 class TrafficSimulator:
     def __init__(self, config, output_path, is_record, record_stats, port=0):
-        scenario = config.get('scenario')
-        self.name = scenario
+        self.name = config.get('scenario')
         self.seed = config.getint('seed')
         self.control_interval_sec = config.getint('control_interval_sec')
         self.yellow_interval_sec = config.getint('yellow_interval_sec')
@@ -48,7 +48,6 @@ class TrafficSimulator:
         self.sim_thread = port
         self.obj = config.get('objective')
         self.data_path = config.get('data_path')
-        self.scenario = scenario
         self.coop_level = config.get('coop_level')
         self.coop_gamma = config.getfloat('coop_gamma')
         self.cur_episode = 0
@@ -59,11 +58,12 @@ class TrafficSimulator:
         self.train_mode = True
         test_seeds = config.get('test_seeds').split(',')
         test_seeds = [int(s) for s in test_seeds]
+        self.init_data(is_record, record_stats, output_path)
+        self.init_test_seeds(test_seeds)
         self._init_map()
         self._init_sim()
         self._init_nodes()
-        self.init_data(is_record, record_stats, output_path)
-        self.init_test_seeds(test_seeds)
+        self.terminate()
 
     def _get_cross_phase(self, action, node, phase_type):
         phase_num = self.nodes[node].phase_num
@@ -120,9 +120,9 @@ class TrafficSimulator:
 
         # get the state vectors
         for node in self.control_nodes:
-            if (self.coop_level == 'global') or (self.coop_level == 'local'):
+            if self.coop_level != 'neighbor':
                 state.append(self.nodes[node].state)
-            elif self.coop_level == 'neighbor':
+            else:
                 cur_state = [self.nodes[node].state]
                 # include both states and fingerprints of neighbors
                 for nnode in self.nodes[node].neighbor:
@@ -203,14 +203,23 @@ class TrafficSimulator:
             policy.append(np.array([p] * self.nodes[node].phase_num))
         return policy
 
-    def _init_sim(self):
+    def _init_sim(self, gui=False):
         sumocfg_file = self._init_sim_config()
-        command = [checkBinary('sumo'), '-c', sumocfg_file]
+        if gui:
+            app = 'sumo-gui'
+        else:
+            app = 'sumo'
+        command = [checkBinary(app), '-c', sumocfg_file]
         command += ['--seed', str(self.seed)]
         command += ['--remote-port', str(self.port)]
         command += ['--no-step-log', 'True']
-        command += ['--time-to-teleport', '-1']
+        command += ['--time-to-teleport', '-1'] # disable teleport
         command += ['--no-warnings', 'True']
+        command += ['--duration-log.disable', 'True']
+        # collect trip info if necessary
+        if self.is_record:
+            command += ['--tripinfo-output',
+                        self.output_path + ('%s_%s_trip.xml' % (self.name, self.coop_level))]
         subprocess.Popen(command)
         self.sim = traci.connect(port=self.port)
 
@@ -269,6 +278,8 @@ class TrafficSimulator:
         num_out_car = self.sim.simulation.getArrivedNumber()
         avg_waiting_time = np.mean([self.sim.vehicle.getWaitingTime(car) for car in cars])
         avg_speed = np.mean(speeds)
+        # all trip-related measurements are not supported by traci,
+        # need to read from outputfile afterwards
         cur_traffic = {'episode': self.cur_episode,
                        'time_sec': self.cur_sec,
                        'number_total_car': num_tot_car,
@@ -289,7 +300,7 @@ class TrafficSimulator:
             # prev action for yellow phase before each switch
             if self.nodes[node].control:
                 self.nodes[node].prev_action = -1
-                # fingerprint is previous policy[:-1]  
+                # fingerprint is previous policy[:-1]
                 self.nodes[node].num_fingerprint = self.nodes[node].phase_num - 1
             num_state, speed_mask = self._get_cross_state_num(node)
             self.nodes[node].state = np.zeros(num_state)
@@ -325,6 +336,25 @@ class TrafficSimulator:
         action_ls.append(action)
         return action_ls
 
+    def collect_tripinfo(self):
+        # read trip xml, has to be called externally to get complete file
+        trip_file = self.output_path + ('%s_%s_trip.xml' % (self.name, self.coop_level))
+        tree = ET.ElementTree(file=trip_file)
+        for child in tree.getroot():
+            cur_trip = child.attrib
+            cur_dict = {}
+            cur_dict['episode'] = self.cur_episode
+            cur_dict['id'] = cur_trip['id']
+            cur_dict['depart_sec'] = cur_trip['depart']
+            cur_dict['arrival_sec'] = cur_trip['arrival']
+            cur_dict['duration_sec'] = cur_trip['duration']
+            cur_dict['wait_step'] = cur_trip['waitSteps']
+            cur_dict['wait_sec'] = cur_trip['timeLoss']
+            self.trip_data.append(cur_dict)
+        # delete the current xml
+        cmd = 'rm ' + trip_file
+        subprocess.check_call(cmd, shell=True)
+
     def init_data(self, is_record, record_stats, output_path):
         self.is_record = is_record
         self.record_stats = record_stats
@@ -332,6 +362,7 @@ class TrafficSimulator:
         if self.is_record:
             self.traffic_data = []
             self.control_data = []
+            self.trip_data = []
         if self.record_stats:
             self.car_num_stat = []
             self.car_speed_stat = []
@@ -344,15 +375,18 @@ class TrafficSimulator:
         if not self.is_record:
             logging.error('Env: no record to output!')
         control_data = pd.DataFrame(self.control_data)
-        control_data.to_csv(self.output_path + 'control.csv')
+        control_data.to_csv(self.output_path + ('%s_%s_control.csv' % (self.name, self.coop_level)))
         traffic_data = pd.DataFrame(self.traffic_data)
-        traffic_data.to_csv(self.output_path + 'traffic.csv')
+        traffic_data.to_csv(self.output_path + ('%s_%s_traffic.csv' % (self.name, self.coop_level)))
+        trip_data = pd.DataFrame(self.trip_data)
+        trip_data.to_csv(self.output_path + ('%s_%s_trip.csv' % (self.name, self.coop_level)))
 
     def reset(self, test_ind=0):
-        self.terminate()
+        # have to terminate previous sim before calling reset
         self._reset_state()
         if not self.train_mode:
             self.seed = self.test_seeds[test_ind]
+        # self._init_sim(gui=True)
         self._init_sim()
         # next environment random condition should be different
         self.seed += 10
@@ -384,6 +418,7 @@ class TrafficSimulator:
             action_str = ','.join([str(int(a)) for a in action])
             reward_str = ','.join([str(r) for r in reward])
             cur_control = {'episode': self.cur_episode,
+                           'time_sec': self.cur_sec,
                            'step': self.cur_sec / self.control_interval_sec,
                            'action': action_str,
                            'reward': reward_str}
@@ -392,7 +427,7 @@ class TrafficSimulator:
         if self.coop_level == 'global':
             reward = global_reward
         elif self.coop_level == 'local':
-            # global reward 
+            # global reward
             new_reward = [global_reward] * len(reward)
             reward = np.array(new_reward)
         elif self.coop_level == 'neighbor':
@@ -405,11 +440,12 @@ class TrafficSimulator:
                         continue
                     if nnode in self.nodes[node].neighbor:
                         cur_reward += self.coop_gamma * reward[i]
-                    else:
+                    elif self.name == 'small_grid':
+                        # in small grid, agent is at most 2 steps away
                         cur_reward += (self.coop_gamma ** 2) * reward[i]
+                    # TODO: step decay in large grid
                 new_reward.append(cur_reward)
             reward = np.array(new_reward)
-        # TODO: neighbor uses spatially discounted reward
         return state, reward, done, global_reward
 
     def update_fingerprint(self, policy):
