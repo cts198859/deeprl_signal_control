@@ -121,22 +121,22 @@ def plot_cdf(X, c='b', label=None):
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
-    config.read('./config/config_local.ini')
+    config.read('./config/config_neighbor.ini')
     base_dir = './output_result/'
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
-    env = SmallGridEnv(config['ENV_CONFIG'], 0, base_dir, is_record=True, record_stat=True)
+    env = SmallGridEnv(config['ENV_CONFIG'], 2, base_dir, is_record=False, record_stat=True)
     ob = env.reset()
-    controller = SmallGridController()
+    controller = SmallGridController(env.control_nodes)
     rewards = []
     while True:
         next_ob, reward, done, _ = env.step(controller.forward(ob))
-        rewards.append(np.mean(reward))
+        rewards += list(reward)
         if done:
             break
         ob = next_ob
     env.plot_stat(np.array(rewards))
     env.terminate()
     time.sleep(2)
-    env.collect_tripinfo()
-    env.output_data()
+    # env.collect_tripinfo()
+    # env.output_data()
