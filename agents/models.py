@@ -116,7 +116,8 @@ class A2C:
         return self.policy.forward(self.sess, ob, done, out_type)
 
     def add_transition(self, ob, action, reward, value, done):
-        if self.reward_norm:
+        # Hard code the reward norm for negative reward only
+        if (self.reward_norm) and (reward < 0):
             reward /= self.reward_norm
         if self.reward_clip:
             reward = np.clip(reward, -self.reward_clip, self.reward_clip)

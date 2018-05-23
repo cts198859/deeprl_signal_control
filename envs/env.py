@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import subprocess
 from sumolib import checkBinary
+import time
 import traci
 import xml.etree.cElementTree as ET
 
@@ -220,6 +221,7 @@ class TrafficSimulator:
         if self.is_record:
             command += ['--tripinfo-output',
                         self.output_path + ('%s_%s_trip.xml' % (self.name, self.coop_level))]
+        time.sleep(1)
         subprocess.Popen(command)
         self.sim = traci.connect(port=self.port)
 
@@ -247,6 +249,8 @@ class TrafficSimulator:
             if self.obj == 'max_flow':
                 for ild in self.nodes[node].ild_out:
                     reward += self.sim.inductionloop.getLastStepVehicleNumber(ild)
+                for ild in self.nodes[node].ild_in:
+                    reward -= 0.01 * self.sim.inductionloop.getLastStepOccupancy(ild)
             elif self.obj == 'min_stop':
                 for edge in self.nodes[node].edge_in:
                     reward -= self.sim.edge.getLastStepHaltingNumber(edge)
