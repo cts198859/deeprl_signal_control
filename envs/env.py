@@ -121,17 +121,20 @@ class TrafficSimulator:
 
         # get the state vectors
         for node in self.control_nodes:
-            if self.coop_level != 'neighbor':
+            if self.coop_level == 'global':
                 state.append(self.nodes[node].state)
             else:
                 cur_state = [self.nodes[node].state]
                 # include both states and fingerprints of neighbors
                 for nnode in self.nodes[node].neighbor:
-                    # discount the neigboring states
-                    cur_state.append(self.nodes[nnode].state * self.coop_gamma)
-                    if self.nodes[nnode].control:
-                        # add fingerprint for control agents
-                        cur_state.append(self.nodes[nnode].fingerprint)
+                    if self.coop_level == 'local':
+                        cur_state.append(self.nodes[nnode].state)
+                    elif self.coop_level == 'neighbor':
+                        # discount the neigboring states
+                        cur_state.append(self.nodes[nnode].state * self.coop_gamma)
+                        if self.nodes[nnode].control:
+                            # add fingerprint for control agents
+                            cur_state.append(self.nodes[nnode].fingerprint)
                 state.append(np.concatenate(cur_state))
 
         if self.coop_level == 'global':

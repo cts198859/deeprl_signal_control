@@ -2,6 +2,8 @@ import os
 from agents.utils import *
 from agents.policies import *
 import logging
+import numpy as np
+import tensorflow as tf
 
 
 class A2C:
@@ -190,8 +192,12 @@ class MultiA2C(A2C):
             return out1, out2
 
     def add_transition(self, obs, actions, rewards, values, done):
-        if self.reward_norm:
-            rewards /= self.reward_norm
+        if (self.reward_norm):
+            for i in range(len(rewards)):
+                if rewards[i] < 0:
+                    rewards[i] = rewards[i] / self.reward_norm
+        if self.reward_clip:
+            rewards = np.clip(rewards, -self.reward_clip, self.reward_clip)
         for i in range(self.n_agent):
             self.trans_buffer_ls[i].add_transition(obs[i], actions[i],
                                                    rewards[i], values[i], done)
