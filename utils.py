@@ -208,7 +208,6 @@ class Tester(Trainer):
                     action = []
                     for pi in policy:
                         action.append(np.argmax(np.array(pi)))
-                        # action.append(np.random.choice(np.arange(len(pi)), p=pi))
             else:
                 action = self.model.forward(ob)
             next_ob, reward, done, global_reward = self.env.step(action)
