@@ -3,8 +3,8 @@ This repo implements A2C for traffic signal control in SUMO-simulated environmen
 
 Available cooperation levels:
 * Centralized: a global agent that makes global control w/ global observation, reward.
-* Decentralized: multiple local agents that make local control w/ local observation, global reward.
-* Multi-agent: multiple local agents that make local control w/ neighboring observation, spatially discounted global reward.
+* Decentralized: multiple local agents that make local control w/ neighborhood observation, global reward.
+* Multi-agent: multiple local agents that make local control w/ neighborhood observation, fingerprints, spatially discounted global reward.
 
 Available environments:
 * A 7-intersection benchmark network w/ designed traffic dynamics. [Ye, Bao-Lin, et al. "A hierarchical model predictive control approach for signal splits optimization in large-scale urban road networks." IEEE Transactions on Intelligent Transportation Systems 17.8 (2016): 2182-2192.](https://ieeexplore.ieee.org/abstract/document/7406703/)

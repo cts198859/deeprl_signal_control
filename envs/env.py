@@ -223,11 +223,10 @@ class TrafficSimulator:
         self.n_s_ls = []
         for node in self.control_nodes:
             num_state = self.nodes[node].num_state
-            if self.coop_level == 'neighbor':
-                for nnode in self.nodes[node].neighbor:
-                    num_state += self.nodes[nnode].num_state
-                    if self.nodes[nnode].control:
-                        num_state += self.nodes[nnode].num_fingerprint
+            for nnode in self.nodes[node].neighbor:
+                num_state += self.nodes[nnode].num_state
+                if (self.coop_level == 'neighbor') and (self.nodes[nnode].control):
+                    num_state += self.nodes[nnode].num_fingerprint
             self.n_s_ls.append(num_state)
         self.n_s = np.sum(np.array(self.n_s_ls))
 
