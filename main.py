@@ -8,7 +8,8 @@ import configparser
 import logging
 import tensorflow as tf
 import threading
-from envs.small_grid_env import SmallGridEnv, SmallGridController 
+from envs.small_grid_env import SmallGridEnv, SmallGridController
+from envs.large_grid_env import LargeGridEnv, LargeGridController 
 from agents.models import A2C, MultiA2C
 from utils import (Counter, Trainer, Tester, Evaluator,
                    check_dir, copy_file, find_file,
@@ -49,6 +50,13 @@ def init_env(config, port=0, naive_policy=False):
         else:
             env = SmallGridEnv(config, port=port)
             policy = SmallGridController(env.control_nodes)
+            return env, policy
+    elif config.get('scenario') == 'large_grid':
+        if not naive_policy:
+            return LargeGridEnv(config, port=port)
+        else:
+            env = LargeGridEnv(config, port=port)
+            policy = LargeGridController(env.control_nodes)
             return env, policy
     else:
         if not naive_policy:
