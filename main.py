@@ -1,3 +1,8 @@
+"""
+Main function for training and evaluating agents in traffic envs
+@author: Tianshu Chu
+"""
+
 import argparse
 import configparser
 import logging

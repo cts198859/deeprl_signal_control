@@ -7,12 +7,12 @@ import numpy as np
 import pandas as pd
 import subprocess
 from sumolib import checkBinary
-import time
 import traci
 import xml.etree.cElementTree as ET
 
 DEFAULT_PORT = 8000
 SEC_IN_MS = 1000
+
 
 class Phase:
     def __init__(self):
@@ -217,14 +217,16 @@ class TrafficSimulator:
         command += ['--seed', str(self.seed)]
         command += ['--remote-port', str(self.port)]
         command += ['--no-step-log', 'True']
-        command += ['--time-to-teleport', '-1'] # disable teleport
+        if self.name == 'small_grid':
+            command += ['--time-to-teleport', '-1'] # disable teleport
+        elif self.name == 'large_grid':
+            command += ['--time-to-teleport', '180']
         command += ['--no-warnings', 'True']
         command += ['--duration-log.disable', 'True']
         # collect trip info if necessary
         if self.is_record:
             command += ['--tripinfo-output',
                         self.output_path + ('%s_%s_trip.xml' % (self.name, self.coop_level))]
-        time.sleep(1)
         subprocess.Popen(command)
         self.sim = traci.connect(port=self.port)
 
@@ -237,11 +239,11 @@ class TrafficSimulator:
         self.n_s_ls = []
         for node in self.control_nodes:
             num_state = self.nodes[node].num_state
-            if self.coop_level == 'neighbor':
-                for nnode in self.nodes[node].neighbor:
+            for nnode in self.nodes[node].neighbor:
+                if self.coop_level != 'global':
                     num_state += self.nodes[nnode].num_state
-                    if self.nodes[nnode].control:
-                        num_state += self.nodes[nnode].num_fingerprint
+                if (self.coop_level == 'neighbor') and (self.nodes[nnode].control):
+                    num_state += self.nodes[nnode].num_fingerprint
             self.n_s_ls.append(num_state)
         self.n_s = np.sum(np.array(self.n_s_ls))
 
@@ -450,7 +452,13 @@ class TrafficSimulator:
                     elif self.name == 'small_grid':
                         # in small grid, agent is at most 2 steps away
                         cur_reward += (self.coop_gamma ** 2) * reward[i]
-                    # TODO: step decay in large grid
+                    elif self.name == 'large_grid':
+                        # in large grid, a distance map is used
+                        if nnode in self.distance_map[node]:
+                            distance = self.distance_map[node][nnode]
+                            cur_reward += (self.coop_gamma ** distance) * reward[i]
+                        else:
+                            cur_reward += (self.coop_gamma ** 6) * reward[i]
                 new_reward.append(cur_reward)
             reward = np.array(new_reward)
         return state, reward, done, global_reward

@@ -1,3 +1,8 @@
+"""
+A2C, IA2C, MA2C models
+@author: Tianshu Chu
+"""
+
 import os
 from agents.utils import *
 from agents.policies import *

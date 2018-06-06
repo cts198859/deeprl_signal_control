@@ -1,4 +1,10 @@
+"""
+Particular class of small traffic network
+@author: Tianshu Chu
+"""
+
 import configparser
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -18,6 +24,7 @@ SMALL_GRID_NEIGHBOR_MAP = {'nt1': ['npc', 'nt2', 'nt6'],
 
 STATE_MEAN_MASKS = {'in_car': False, 'in_speed': True, 'out_car': False}
 STATE_NAMES = ['in_car', 'in_speed', 'out_car']
+# map from ild order (alphabeta) to signal order (clockwise from north)
 STATE_PHASE_MAP = {'nt1': [0, 1, 2], 'nt2': [1, 0], 'nt3': [1, 0],
                    'nt4': [1, 0], 'nt5': [1, 0], 'nt6': [1, 0]}
 
@@ -68,7 +75,6 @@ class SmallGridController:
     def __init__(self, nodes):
         self.name = 'naive'
         self.nodes = nodes
-        self.phase = SmallGridPhase()
 
     def forward(self, obs):
         actions = []
@@ -112,7 +118,8 @@ class SmallGridEnv(TrafficSimulator):
             fig = plt.figure(figsize=(8, 6))
             plot_cdf(data)
             plt.ylabel(name)
-            fig.savefig(self.output_path + name + '.png')
+            fig.savefig(self.output_path + self.name + '_' + name + '.png')
+
 
 def plot_cdf(X, c='b', label=None):
     sorted_data = np.sort(X)
@@ -120,8 +127,10 @@ def plot_cdf(X, c='b', label=None):
     plt.plot(sorted_data, yvals, color=c, label=label)
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s',
+                        level=logging.INFO)
     config = configparser.ConfigParser()
-    config.read('./config/config_neighbor.ini')
+    config.read('./config/config_test.ini')
     base_dir = './output_result/'
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)

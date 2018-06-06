@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 build *.xml files for a small 6-intersection benchmark network
-w/ the traffic dynamics adopted from the following paper:
+w/ the traffic dynamics modified from the following paper:
 
 Ye, Bao-Lin, et al. "A hierarchical model predictive control approach for signal splits optimization
 in large-scale urban road networks." IEEE Transactions on Intelligent Transportation Systems 17.8
@@ -13,6 +13,7 @@ simulation details are under section V.
 """
 import numpy as np
 import os
+import xml.etree.cElementTree as ET
 
 # FLOW_MULTIPLIER = 0.8
 FLOW_MULTIPLIER = 1.0
@@ -325,6 +326,10 @@ def gen_rou_file(seed=None, thread=None, path=None, num_car_hourly=0):
     if seed is not None:
         command += ' --seed %d' % int(seed)
     os.system(command)
+    # remove webpage loading
+    tree = ET.ElementTree(file=files[-1])
+    tree.getroot().attrib = {}
+    tree.write(files[-1])
     sumocfg_file = path + ('exp_%d.sumocfg' % thread)
     write_file(sumocfg_file, output_config(thread=thread))
     return sumocfg_file
@@ -437,7 +442,7 @@ def main():
     os.system('netconvert -c exp.netccfg')
 
     # raw.rou.xml file
-    flow = '  <flow id="f:%s" from="%s" begin="%d" end="%d" vehsPerHour="%i" type="type1"/>\n'
+    flow = '  <flow id="f:%s" from="%s" begin="%d" end="%d" vehsPerHour="%d" type="type1"/>\n'
     write_file('./exp.raw.rou.xml', output_flows(flow, num_car=1000))
 
     # turns.xml file
