@@ -145,10 +145,7 @@ class LstmPolicy(Policy):
     def _get_forward_outs(self, out_type):
         outs = []
         if 'p' in out_type:
-            if self.discrete:
-                outs.append(self.pi_fw)
-            else:
-                outs += self.pi_fw
+            outs.append(self.pi_fw)
         if 'v' in out_type:
             outs.append(self.v_fw)
         return outs

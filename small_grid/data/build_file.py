@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 build *.xml files for a small 6-intersection benchmark network
-w/ the traffic dynamics adopted from the following paper:
+w/ the traffic dynamics modified from the following paper:
 
 Ye, Bao-Lin, et al. "A hierarchical model predictive control approach for signal splits optimization
 in large-scale urban road networks." IEEE Transactions on Intelligent Transportation Systems 17.8
@@ -13,8 +13,10 @@ simulation details are under section V.
 """
 import numpy as np
 import os
+import xml.etree.cElementTree as ET
 
-FLOW_MULTIPLIER = 0.8
+# FLOW_MULTIPLIER = 0.8
+FLOW_MULTIPLIER = 1.0
 SPEED_LIMIT = 20
 L0, L1 = 200, 400
 L0_end = 75
@@ -182,11 +184,16 @@ def output_flows(flow, num_car_hourly):
     str_flows += '  <vType id="type1" length="5" accel="5" decel="10"/>\n'
 
     # flows vary every 10min, with dim 5x12, 5 source links are x1, x2, x3, x8, x9
-    flows = [[450, 475, 500, 600, 625, 650, 700, 650, 625, 600, 500, 400],
-             [300, 350, 400, 500, 525, 550, 575, 525, 500, 450, 350, 300],
-             [475, 500, 550, 625, 725, 750, 800, 700, 675, 625, 550, 450],
-             [575, 650, 700, 925, 950, 975, 1000, 950, 900, 750, 650, 550],
-             [625, 700, 750, 825, 925, 950, 975, 900, 850, 800, 700, 600]]
+    # flows = [[450, 475, 500, 600, 625, 650, 700, 650, 625, 600, 500, 400],
+    #          [300, 350, 400, 500, 525, 550, 575, 525, 500, 450, 350, 300],
+    #          [475, 500, 550, 625, 725, 750, 800, 700, 675, 625, 550, 450],
+    #          [575, 650, 700, 925, 950, 975, 1000, 950, 900, 750, 650, 550],
+    #          [625, 700, 750, 825, 925, 950, 975, 900, 850, 800, 700, 600]]
+    flows = [[500, 100, 700, 800, 550, 550, 100, 200, 250, 250, 400, 800],
+             [600, 700, 100, 200, 50, 100, 1000, 500, 450, 150, 400, 200],
+             [100, 400, 400, 200, 600, 550, 100, 500, 500, 800, 400, 200],
+             [100, 200, 300, 300, 300, 400, 600, 600, 800, 500, 400, 300],
+             [600, 400, 400, 600, 800, 400, 300, 300, 300, 200, 250, 250]]
     edges = ['e:%s,%s' % (x, 'nt1') for x in ['np1', 'np2', 'np3']] + \
             ['e:%s,%s' % (x, 'nt4') for x in ['np8', 'np9']]
     times = range(0, 7201, 1200)
@@ -265,9 +272,12 @@ def output_turns():
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
     str_turns += '  </interval>\n'
     # cross npc needs to be estimated based on flows
-    flows = [[450, 475, 500, 600, 625, 650, 700, 650, 625, 600, 500, 400],
-             [300, 350, 400, 500, 525, 550, 575, 525, 500, 450, 350, 300],
-             [475, 500, 550, 625, 725, 750, 800, 700, 675, 625, 550, 450]]
+    # flows = [[450, 475, 500, 600, 625, 650, 700, 650, 625, 600, 500, 400],
+    #          [300, 350, 400, 500, 525, 550, 575, 525, 500, 450, 350, 300],
+    #          [475, 500, 550, 625, 725, 750, 800, 700, 675, 625, 550, 450]]
+    flows = [[500, 100, 700, 800, 550, 550, 100, 200, 250, 250, 400, 800],
+             [600, 700, 100, 200, 50, 100, 1000, 500, 450, 150, 400, 200],
+             [100, 400, 400, 200, 600, 550, 100, 500, 500, 800, 400, 200]]
     times = range(0, 7201, 600)
     flows = np.array(flows)
     base_probs = np.array([[0.15, 0.15], [0.35, 0.35], [0.15, 0.2]])
@@ -316,6 +326,10 @@ def gen_rou_file(seed=None, thread=None, path=None, num_car_hourly=0):
     if seed is not None:
         command += ' --seed %d' % int(seed)
     os.system(command)
+    # remove webpage loading
+    tree = ET.ElementTree(file=files[-1])
+    tree.getroot().attrib = {}
+    tree.write(files[-1])
     sumocfg_file = path + ('exp_%d.sumocfg' % thread)
     write_file(sumocfg_file, output_config(thread=thread))
     return sumocfg_file
@@ -428,7 +442,7 @@ def main():
     os.system('netconvert -c exp.netccfg')
 
     # raw.rou.xml file
-    flow = '  <flow id="f:%s" from="%s" begin="%d" end="%d" vehsPerHour="%i" type="type1"/>\n'
+    flow = '  <flow id="f:%s" from="%s" begin="%d" end="%d" vehsPerHour="%d" type="type1"/>\n'
     write_file('./exp.raw.rou.xml', output_flows(flow, num_car=1000))
 
     # turns.xml file
