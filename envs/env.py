@@ -125,13 +125,16 @@ class TrafficSimulator:
                 state.append(self.nodes[node].state)
             else:
                 cur_state = [self.nodes[node].state]
-                # include both states and fingerprints of neighbors
+                # include states of neighbors
                 for nnode in self.nodes[node].neighbor:
                     if self.coop_level == 'local':
                         cur_state.append(self.nodes[nnode].state)
                     elif self.coop_level == 'neighbor':
                         # discount the neigboring states
                         cur_state.append(self.nodes[nnode].state * self.coop_gamma)
+                # include fingerprints of neighbors
+                if self.coop_level == 'neighbor':
+                    for nnode in self.nodes[node].neighbor:
                         if self.nodes[nnode].control:
                             # add fingerprint for control agents
                             cur_state.append(self.nodes[nnode].fingerprint)
@@ -237,14 +240,17 @@ class TrafficSimulator:
     def _init_state_space(self):
         self._reset_state()
         self.n_s_ls = []
+        self.n_f_ls = []
         for node in self.control_nodes:
             num_state = self.nodes[node].num_state
+            num_fingerprint = 0
             for nnode in self.nodes[node].neighbor:
                 if self.coop_level != 'global':
                     num_state += self.nodes[nnode].num_state
                 if (self.coop_level == 'neighbor') and (self.nodes[nnode].control):
-                    num_state += self.nodes[nnode].num_fingerprint
-            self.n_s_ls.append(num_state)
+                    num_fingerprint += self.nodes[nnode].num_fingerprint
+            self.n_s_ls.append(num_state + num_fingerprint)
+            self.n_f_ls.append(num_fingerprint)
         self.n_s = np.sum(np.array(self.n_s_ls))
 
     def _measure_reward_step(self):
