@@ -185,7 +185,7 @@ class FcPolicy(Policy):
 
 class HybridPolicy(LstmPolicy):
     def __init__(self, n_s, n_a, n_f, n_step, n_fc0=128, n_fc=128, n_lstm=64, name=None):
-        super().__init__(n_a, n_s, n_step, 'hybrid', name)
+        Policy.__init__(self, n_a, n_s, n_step, 'hybrid', name)
         self.n_lstm = n_lstm
         self.n_fc = n_fc
         self.n_fc0 = n_fc0

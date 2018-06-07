@@ -209,6 +209,7 @@ class LargeGridEnv(TrafficSimulator):
                                 'nt4':3, 'nt8':3, 'nt10':3, 'nt12':3, 'nt16':3, 'nt22':3,
                                 'nt3':4, 'nt5':4, 'nt7':4, 'nt11':4, 'nt21':4,
                                 'nt2':5, 'nt6':5}
+        return distance_map
 
     def _init_map(self):
         self.neighbor_map = self._init_large_neighbor_map()
