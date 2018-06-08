@@ -37,9 +37,9 @@ STATE_PHASE_MAP = {'nt1': [2, 3, 1, 0], 'nt2': [2, 3, 1, 0],
 class LargeGridPhase(Phase):
     def __init__(self):
         two_phase = []
-        phase = {'green': 'GGgrrrGGgrrr', 'yellow': 'yyyrrryyyrrr'}
+        phase = {'green': 'GGgsrrGGgsrr', 'yellow': 'yyysrryyysrr'}
         two_phase.append(phase)
-        phase = {'green': 'rrrGGgrrrGGg', 'yellow': 'rrryyyrrryyy'}
+        phase = {'green': 'srrGGgsrrGGg', 'yellow': 'srryyysrryyy'}
         two_phase.append(phase)
         self.phases = {2: two_phase}
 
@@ -262,4 +262,5 @@ if __name__ == '__main__':
             break
         ob = next_ob
     env.plot_stat(np.array(rewards))
+    logging.info('avg reward: %.2f' % np.mean(rewards))
     env.terminate()

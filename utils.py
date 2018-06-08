@@ -155,6 +155,7 @@ class Trainer():
             # termination
             if done:
                 self.env.terminate()
+                time.sleep(2)
                 ob = self.env.reset()
                 self._add_summary(cum_reward / float(self.cur_step), global_step)
                 cum_reward = 0

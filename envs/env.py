@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import subprocess
 from sumolib import checkBinary
+import time
 import traci
 import xml.etree.cElementTree as ET
 
@@ -231,6 +232,8 @@ class TrafficSimulator:
             command += ['--tripinfo-output',
                         self.output_path + ('%s_%s_trip.xml' % (self.name, self.coop_level))]
         subprocess.Popen(command)
+        # wait 5s to establish the traci server
+        time.sleep(5)
         self.sim = traci.connect(port=self.port)
 
     def _init_sim_config(self):
