@@ -38,7 +38,7 @@ def extract_scalar(multiplexer, run_name, tag):
 
 def get_event_log(log_dir):
     for f in os.listdir(log_dir):
-        if f.statswith('events.out.tfevents'):
+        if f.startswith('events.out.tfevents'):
             return (log_dir + f)
     return None
 
