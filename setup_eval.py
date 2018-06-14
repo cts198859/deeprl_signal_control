@@ -25,17 +25,26 @@ def main():
     for scenario in ['small_grid', 'large_grid']:
         if not os.path.exists(eval_dir + '/' + scenario):
             os.mkdir(eval_dir + '/' + scenario)
+        # create folder for train reward
+        train_data_dir = '/'.join([eval_dir, scenario, 'train_data'])
+        if not os.path.exists(train_data_dir):
+            os.mkdir(train_data_dir)
         for coop in ['neighbor', 'global', 'local']:
             case = scenario + '_' + coop
             if case not in folders:
                 continue
             cur_folder = train_dir + '/' + case
+            # copy config file
             cmd = 'cp %s %s' % (cur_folder + '/data/*.ini', cur_folder + '/model/')
             subprocess.check_call(cmd, shell=True)
+            # copy model
             cmd = 'cp -r %s %s' % (cur_folder + '/model', '/'.join([eval_dir, scenario, coop]))
             subprocess.check_call(cmd, shell=True)
+            # copy train reward
+            tar_train_file = train_data_dir + '/' + coop + '_train_reward.csv'
+            cmd = 'cp %s %s' % (cur_folder + '/log/train_reward.csv', tar_train_file)
         new_folder = '/'.join([eval_dir, scenario, 'naive'])
-        old_folder = '/'.join([eval_dir, scenario, 'neighbor'])
+        old_folder = '/'.join([eval_dir, scenario, 'local'])
         os.mkdir(new_folder)
         cmd = 'cp %s %s' % (old_folder + '/*.ini', new_folder + '/')
         subprocess.check_call(cmd, shell=True)
