@@ -43,6 +43,7 @@ def main():
             # copy train reward
             tar_train_file = train_data_dir + '/' + coop + '_train_reward.csv'
             cmd = 'cp %s %s' % (cur_folder + '/log/train_reward.csv', tar_train_file)
+            subprocess.check_call(cmd, shell=True)
         new_folder = '/'.join([eval_dir, scenario, 'naive'])
         old_folder = '/'.join([eval_dir, scenario, 'local'])
         os.mkdir(new_folder)
