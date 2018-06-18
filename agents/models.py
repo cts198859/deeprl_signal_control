@@ -12,7 +12,7 @@ import tensorflow as tf
 
 
 class A2C:
-    def __init__(self, n_s, n_a, total_step, model_config, seed=0):
+    def __init__(self, n_s, n_a, total_step, model_config, seed=0, n_f=None):
         # load parameters
         self.name = 'a2c'
         self.n_agent = 1
@@ -26,7 +26,7 @@ class A2C:
         tf.set_random_seed(seed)
         config = tf.ConfigProto(allow_soft_placement=True)
         self.sess = tf.Session(config=config)
-        self.policy = self._init_policy(n_s, n_a, model_config)
+        self.policy = self._init_policy(n_s, n_a, n_f, model_config)
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
@@ -36,7 +36,7 @@ class A2C:
         self.sess.run(tf.global_variables_initializer())
 
     @staticmethod
-    def _init_policy(n_s, n_a, model_config, agent_name=None):
+    def _init_policy(n_s, n_a, n_f, model_config, agent_name=None):
         n_step = model_config.getint('batch_size')
         n_h = model_config.getint('num_h')
         policy_name = model_config.get('policy')
@@ -48,6 +48,11 @@ class A2C:
             n_fc = model_config.getint('num_fc')
             policy = FcPolicy(n_s, n_a, n_step, n_fc0=n_fc,
                               n_fc=n_h, name=agent_name)
+        elif policy_name == 'hybrid':
+            n_fc = model_config.getint('num_fc')
+            n_lstm = model_config.getint('num_lstm')
+            policy = HybridPolicy(n_s, n_a, n_f, n_step, n_fc0=n_fc,
+                                  n_lstm=n_lstm, n_fc=n_h, name=agent_name)
         return policy
 
     def _init_scheduler(self, model_config):
@@ -131,10 +136,10 @@ class A2C:
         self.trans_buffer.add_transition(ob, action, reward, value, done)
 
 
-class MultiA2C(A2C):
+class IA2C(A2C):
     def __init__(self, n_s_ls, n_a_ls, total_step,
                  model_config, seed=0):
-        self.name = 'ma2c'
+        self.name = 'ia2c'
         self.agents = []
         self.n_agent = len(n_s_ls)
         self.reward_clip = model_config.getfloat('reward_clip')
@@ -150,7 +155,7 @@ class MultiA2C(A2C):
         self.policy_ls = []
         for i, (n_s, n_a) in enumerate(zip(self.n_s_ls, self.n_a_ls)):
             # agent_name is needed to differentiate multi-agents
-            self.policy_ls.append(self._init_policy(n_s, n_a, model_config, agent_name=str(i)))
+            self.policy_ls.append(self._init_policy(n_s, n_a, 0, model_config, agent_name=str(i)))
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
@@ -206,3 +211,33 @@ class MultiA2C(A2C):
         for i in range(self.n_agent):
             self.trans_buffer_ls[i].add_transition(obs[i], actions[i],
                                                    rewards[i], values[i], done)
+
+
+class MA2C(IA2C):
+    def __init__(self, n_s_ls, n_a_ls, n_f_ls, total_step,
+                 model_config, seed=0):
+        self.name = 'ma2c'
+        self.agents = []
+        self.n_agent = len(n_s_ls)
+        self.reward_clip = model_config.getfloat('reward_clip')
+        self.reward_norm = model_config.getfloat('reward_norm')
+        self.n_s_ls = n_s_ls
+        self.n_a_ls = n_a_ls
+        self.n_f_ls = n_f_ls
+        self.n_step = model_config.getint('batch_size')
+        # init tf
+        tf.reset_default_graph()
+        tf.set_random_seed(seed)
+        config = tf.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.Session(config=config)
+        self.policy_ls = []
+        for i, (n_s, n_a, n_f) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_f_ls)):
+            # agent_name is needed to differentiate multi-agents
+            self.policy_ls.append(self._init_policy(n_s - n_f, n_a, n_f, model_config, agent_name=str(i)))
+        self.saver = tf.train.Saver(max_to_keep=5)
+        if total_step:
+            # training
+            self.total_step = total_step
+            self._init_scheduler(model_config)
+            self._init_train(model_config)
+        self.sess.run(tf.global_variables_initializer())

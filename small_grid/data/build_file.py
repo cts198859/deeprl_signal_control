@@ -443,7 +443,7 @@ def main():
 
     # raw.rou.xml file
     flow = '  <flow id="f:%s" from="%s" begin="%d" end="%d" vehsPerHour="%d" type="type1"/>\n'
-    write_file('./exp.raw.rou.xml', output_flows(flow, num_car=1000))
+    write_file('./exp.raw.rou.xml', output_flows(flow, num_car_hourly=1000))
 
     # turns.xml file
     write_file('./exp.turns.xml', output_turns())

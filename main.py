@@ -10,7 +10,7 @@ import tensorflow as tf
 import threading
 from envs.small_grid_env import SmallGridEnv, SmallGridController
 from envs.large_grid_env import LargeGridEnv, LargeGridController 
-from agents.models import A2C, MultiA2C
+from agents.models import A2C, IA2C, MA2C
 from utils import (Counter, Trainer, Tester, Evaluator,
                    check_dir, copy_file, find_file,
                    init_dir, init_log, init_test_flag,
@@ -93,9 +93,12 @@ def train(args):
     if env.coop_level == 'global':
         model = A2C(env.n_s, env.n_a, total_step,
                     config['MODEL_CONFIG'], seed=seed)
-    else:
-        model = MultiA2C(env.n_s_ls, env.n_a_ls, total_step,
-                         config['MODEL_CONFIG'], seed=seed)
+    elif env.coop_level == 'local':
+        model = IA2C(env.n_s_ls, env.n_a_ls, total_step,
+                     config['MODEL_CONFIG'], seed=seed)
+    elif env.coop_level == 'neighbor':
+        model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, total_step,
+                     config['MODEL_CONFIG'], seed=seed)
 
     threads = []
     summary_writer = tf.summary.FileWriter(dirs['log'])
@@ -152,8 +155,10 @@ def evaluate_fn(agent_dir, output_dir, seeds, port):
         # init centralized or multi agent
         if env.coop_level == 'global':
             model = A2C(env.n_s, env.n_a, 0, config['MODEL_CONFIG'])
+        elif env.coop_level == 'local':
+            model = IA2C(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'])
         else:
-            model = MultiA2C(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'])
+            model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, 0, config['MODEL_CONFIG'])
         if not model.load(agent_dir + '/'):
             return
     else:

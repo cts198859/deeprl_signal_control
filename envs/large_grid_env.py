@@ -37,9 +37,9 @@ STATE_PHASE_MAP = {'nt1': [2, 3, 1, 0], 'nt2': [2, 3, 1, 0],
 class LargeGridPhase(Phase):
     def __init__(self):
         two_phase = []
-        phase = {'green': 'GGgrrrGGgrrr', 'yellow': 'yyyrrryyyrrr'}
+        phase = {'green': 'GGgsrrGGgsrr', 'yellow': 'yyysrryyysrr'}
         two_phase.append(phase)
-        phase = {'green': 'rrrGGgrrrGGg', 'yellow': 'rrryyyrrryyy'}
+        phase = {'green': 'srrGGgsrrGGg', 'yellow': 'srryyysrryyy'}
         two_phase.append(phase)
         self.phases = {2: two_phase}
 
@@ -209,6 +209,7 @@ class LargeGridEnv(TrafficSimulator):
                                 'nt4':3, 'nt8':3, 'nt10':3, 'nt12':3, 'nt16':3, 'nt22':3,
                                 'nt3':4, 'nt5':4, 'nt7':4, 'nt11':4, 'nt21':4,
                                 'nt2':5, 'nt6':5}
+        return distance_map
 
     def _init_map(self):
         self.neighbor_map = self._init_large_neighbor_map()
@@ -261,4 +262,5 @@ if __name__ == '__main__':
             break
         ob = next_ob
     env.plot_stat(np.array(rewards))
+    logging.info('avg reward: %.2f' % np.mean(rewards))
     env.terminate()

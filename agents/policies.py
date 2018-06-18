@@ -181,3 +181,44 @@ class FcPolicy(Policy):
                                self.entropy_coef:cur_beta})
         if summary_writer is not None:
             summary_writer.add_summary(summary, global_step=global_step)
+
+
+class HybridPolicy(LstmPolicy):
+    def __init__(self, n_s, n_a, n_f, n_step, n_fc0=128, n_fc=128, n_lstm=64, name=None):
+        Policy.__init__(self, n_a, n_s, n_step, 'hybrid', name)
+        self.n_lstm = n_lstm
+        self.n_fc = n_fc
+        self.n_fc0 = n_fc0
+        self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_f]) # forward 1-step
+        self.done_fw = tf.placeholder(tf.float32, [1])
+        self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_f]) # backward n-step
+        self.done_bw = tf.placeholder(tf.float32, [n_step])
+        self.states = tf.placeholder(tf.float32, [2, n_lstm * 2])
+        with tf.variable_scope(self.name):
+            # pi and v use separate nets
+            self.pi_fw, pi_state = self._build_net(n_fc, 'forward', 'pi')
+            self.v_fw, v_state = self._build_net(n_fc, 'forward', 'v')
+            pi_state = tf.expand_dims(pi_state, 0)
+            v_state = tf.expand_dims(v_state, 0)
+            self.new_states = tf.concat([pi_state, v_state], 0)
+        with tf.variable_scope(self.name, reuse=True):
+            self.pi, _ = self._build_net(n_fc, 'backward', 'pi')
+            self.v, _ = self._build_net(n_fc, 'backward', 'v')
+        self._reset()
+
+    def _build_net(self, n_fc, in_type, out_type):
+        if in_type == 'forward':
+            ob = self.ob_fw
+            done = self.done_fw
+        else:
+            ob = self.ob_bw
+            done = self.done_bw
+        if out_type == 'pi':
+            states = self.states[0]
+        else:
+            states = self.states[1]
+        h0, new_states = lstm(ob[:, :self.n_s], done, states, out_type + '_lstm')
+        h1 = fc(ob[:, self.n_s:], out_type + '_fc0', self.n_fc0)
+        h = tf.concat([h0, h1], 1)
+        out_val = self._build_fc_net(h, n_fc, out_type)
+        return out_val, new_states
