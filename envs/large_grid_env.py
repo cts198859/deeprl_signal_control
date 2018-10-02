@@ -9,14 +9,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import seaborn as sns
-from envs.env import Phase, TrafficSimulator
+from envs.env import PhaseMap, PhaseSet, TrafficSimulator
 from large_grid.data.build_file import gen_rou_file
 
 sns.set_color_codes()
 
 
-STATE_MEAN_MASKS = {'in_car': False, 'in_speed': True, 'out_car': False}
-STATE_NAMES = ['in_car', 'in_speed', 'out_car']
+STATE_NAMES = ['wave', 'wait']
 PHASE_NUM = 2
 # map from ild order (alphabeta) to signal order (clockwise from north)
 STATE_PHASE_MAP = {'nt1': [2, 3, 1, 0], 'nt2': [2, 3, 1, 0],
@@ -34,34 +33,26 @@ STATE_PHASE_MAP = {'nt1': [2, 3, 1, 0], 'nt2': [2, 3, 1, 0],
                    'nt25': [1, 0, 2, 3]}
 
 
-class LargeGridPhase(Phase):
+class LargeGridPhase(PhaseMap):
     def __init__(self):
-        two_phase = []
-        phase = {'green': 'GGgsrrGGgsrr', 'yellow': 'yyysrryyysrr'}
-        two_phase.append(phase)
-        phase = {'green': 'srrGGgsrrGGg', 'yellow': 'srryyysrryyy'}
-        two_phase.append(phase)
-        self.phases = {2: two_phase}
+        phases = ['GGgsrrGGgsrr', 'srrGGgsrrGGg']
+        self.phases = {2: PhaseSet(phases)}
 
 
 class LargeGridController:
-    def __init__(self, nodes):
-        self.name = 'naive'
-        self.nodes = nodes
+    def __init__(self, node_names):
+        self.name = 'greedy'
+        self.node_names = node_names
 
     def forward(self, obs):
         actions = []
-        for ob, node in zip(obs, self.nodes):
-            actions.append(self.greedy(ob, node))
+        for ob, node_name in zip(obs, self.node_names):
+            actions.append(self.greedy(ob, node_name))
         return actions
 
-    def greedy(self, ob, node):
+    def greedy(self, ob, node_name):
         # hard code the mapping from state to number of cars
-        phase = STATE_PHASE_MAP[node]
-        in_cars = np.zeros_like(phase)
-        for i, x in zip(phase, ob[:len(phase)]):
-            in_cars[i] = x
-        if (in_cars[0] + in_cars[2]) > (in_cars[1] + in_cars[3]):
+        if (ob[0] + ob[2]) >= (ob[1] + ob[3]):
             return 0
         return 1
 
@@ -72,7 +63,7 @@ class LargeGridEnv(TrafficSimulator):
         self.num_int_car_hourly = config.getint('num_int_car_per_hour')
         super().__init__(config, output_path, is_record, record_stat, port=port)
 
-    def _get_cross_action_num(self, node):
+    def _get_node_phase_id(self, node):
         return PHASE_NUM
 
     def _init_large_neighbor_map(self):
@@ -215,9 +206,9 @@ class LargeGridEnv(TrafficSimulator):
         self.neighbor_map = self._init_large_neighbor_map()
         # for spatial discount
         self.distance_map = self._init_large_distance_map()
+        self.max_distance = 6
         self.phase_map = LargeGridPhase()
         self.state_names = STATE_NAMES
-        self.state_mean_masks = STATE_MEAN_MASKS
 
     def _init_sim_config(self):
         return gen_rou_file(self.data_path,
@@ -227,11 +218,8 @@ class LargeGridEnv(TrafficSimulator):
                             thread=self.sim_thread)
 
     def plot_stat(self, rewards):
-        data_set = {}
-        data_set['car_num'] = np.array(self.car_num_stat)
-        data_set['car_speed'] = np.array(self.car_speed_stat)
-        data_set['reward'] = rewards
-        for name, data in data_set.items():
+        self.state_stat['reward'] = rewards
+        for name, data in self.state_stat.items():
             fig = plt.figure(figsize=(8, 6))
             plot_cdf(data)
             plt.ylabel(name)
@@ -251,16 +239,17 @@ if __name__ == '__main__':
     base_dir = './output_result/'
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
-    env = LargeGridEnv(config['ENV_CONFIG'], 2, base_dir, is_record=False, record_stat=True)
+    env = LargeGridEnv(config['ENV_CONFIG'], 2, base_dir, is_record=True, record_stat=True)
     ob = env.reset()
-    controller = LargeGridController(env.control_nodes)
+    controller = LargeGridController(env.node_names)
     rewards = []
-    while True:
+    for _ in range(500):
         next_ob, reward, done, _ = env.step(controller.forward(ob))
-        rewards += list(reward)
+        rewards.append(reward)
         if done:
             break
         ob = next_ob
     env.plot_stat(np.array(rewards))
     logging.info('avg reward: %.2f' % np.mean(rewards))
     env.terminate()
+    env.output_data()

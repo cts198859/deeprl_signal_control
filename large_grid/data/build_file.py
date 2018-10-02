@@ -320,17 +320,12 @@ def output_config(thread=None):
     return str_config
 
 
-def get_ild_str(from_node, to_node, ild_in=None, ild_out=None):
+def get_ild_str(from_node, to_node, ild=None):
     edge = '%s,%s' % (from_node, to_node)
-    ild_str = ''
-    if ild_in:
-        ild_str += ild_in % (edge, 'e:' + edge)
-    if ild_out:
-        ild_str += ild_out % (edge, 'e:' + edge)
-    return ild_str
+    return ild % (edge, 'e:' + edge)
 
 
-def output_ild(ild_in, ild_out):
+def output_ild(ild):
     str_adds = '<additional>\n'
     in_edges = [5, 10, 15, 20, 25, 21, 16, 11, 6, 1,
                 1, 2, 3, 4, 5, 25, 24, 23, 22, 21]
@@ -340,22 +335,21 @@ def output_ild(ild_in, ild_out):
     for i, j in zip(in_edges, out_edges):
         node1 = 'nt' + str(i)
         node2 = 'np' + str(j)
-        str_adds += get_ild_str(node1, node2, ild_in=ild_in)
-        str_adds += get_ild_str(node2, node1, ild_out=ild_out)
+        str_adds += get_ild_str(node2, node1, ild=ild)
     # streets
     for i in range(1, 25, 5):
         for j in range(4):
             node1 = 'nt' + str(i + j)
             node2 = 'nt' + str(i + j + 1)
-            str_adds += get_ild_str(node1, node2, ild_in=ild_in, ild_out=ild_out)
-            str_adds += get_ild_str(node2, node1, ild_in=ild_in, ild_out=ild_out)
+            str_adds += get_ild_str(node1, node2, ild=ild)
+            str_adds += get_ild_str(node2, node1, ild=ild)
     # avenues
     for i in range(1, 6):
         for j in range(0, 20, 5):
             node1 = 'nt' + str(i + j)
             node2 = 'nt' + str(i + j + 5)
-            str_adds += get_ild_str(node1, node2, ild_in=ild_in, ild_out=ild_out)
-            str_adds += get_ild_str(node2, node1, ild_in=ild_in, ild_out=ild_out)
+            str_adds += get_ild_str(node1, node2, ild=ild)
+            str_adds += get_ild_str(node2, node1, ild=ild)
     str_adds += '</additional>\n'
     return str_adds
 
@@ -410,9 +404,9 @@ def main():
     # os.system('jtrrouter -n exp.net.xml -r exp.raw.rou.xml -o exp.rou.xml')
 
     # add.xml file
-    ild_out = '  <inductionLoop file="ild_in.out" freq="15" id="ild_out:%s" lane="%s_0" pos="-50"/>\n'
-    ild_in = '  <inductionLoop file="ild_out.out" freq="15" id="ild_in:%s" lane="%s_0" pos="10"/>\n'
-    write_file('./exp.add.xml', output_ild(ild_in, ild_out))
+    ild = '  <laneAreaDetector file="ild.out" freq="1" id="ild:%s_0" lane="%s_0" pos="-50" endPos="-1"/>\n'
+    # ild_in = '  <inductionLoop file="ild_out.out" freq="15" id="ild_in:%s" lane="%s_0" pos="10"/>\n'
+    write_file('./exp.add.xml', output_ild(ild))
 
     # config file
     write_file('./exp.sumocfg', output_config())

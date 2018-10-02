@@ -4,7 +4,7 @@ from agents.utils import *
 import bisect
 
 
-class Policy:
+class ACPolicy:
     def __init__(self, n_a, n_s, n_step, policy_name, agent_name):
         self.name = policy_name
         if agent_name is not None:
@@ -72,7 +72,7 @@ class Policy:
         self.summary = tf.summary.merge(summaries)
 
 
-class LstmPolicy(Policy):
+class LstmACPolicy(ACPolicy):
     def __init__(self, n_s, n_a, n_step, n_fc=128, n_lstm=64, name=None):
         super().__init__(n_a, n_s, n_step, 'lstm', name)
         self.n_lstm = n_lstm
@@ -151,39 +151,7 @@ class LstmPolicy(Policy):
         return outs
 
 
-class FcPolicy(Policy):
-    def __init__(self, n_s, n_a, n_step, n_fc0=256, n_fc=128, name=None):
-        super().__init__(n_a, n_s, n_step, 'fc', name)
-        self.n_fc = n_fc0
-        self.obs = tf.placeholder(tf.float32, [None, n_s])
-        with tf.variable_scope(self.name):
-            # pi and v use separate nets
-            self.pi = self._build_net(n_fc, 'pi')
-            self.v = self._build_net(n_fc, 'v')
-
-    def _build_net(self, n_fc, out_type):
-        h = fc(self.obs, out_type + '_fc0', self.n_fc)
-        return self._build_fc_net(h, n_fc, out_type)
-
-    def forward(self, sess, ob, done, out_type='pv'):
-        outs = self._get_forward_outs(out_type)
-        out_values = sess.run(outs, {self.obs:[ob]})
-        return self._return_forward_outs(out_values)
-
-    def backward(self, sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
-                 summary_writer=None, global_step=None):
-        summary, _ = sess.run([self.summary, self._train],
-                              {self.obs:obs,
-                               self.A:acts,
-                               self.ADV:Advs,
-                               self.R:Rs,
-                               self.lr:cur_lr,
-                               self.entropy_coef:cur_beta})
-        if summary_writer is not None:
-            summary_writer.add_summary(summary, global_step=global_step)
-
-
-class HybridPolicy(LstmPolicy):
+class HybridACPolicy(LstmACPolicy):
     def __init__(self, n_s, n_a, n_f, n_step, n_fc0=128, n_fc=128, n_lstm=64, name=None):
         Policy.__init__(self, n_a, n_s, n_step, 'hybrid', name)
         self.n_lstm = n_lstm
@@ -222,3 +190,35 @@ class HybridPolicy(LstmPolicy):
         h = tf.concat([h0, h1], 1)
         out_val = self._build_fc_net(h, n_fc, out_type)
         return out_val, new_states
+
+
+class DeepQPolicy:
+    def __init__(self, n_s, n_a, n_step, n_fc0=256, n_fc=128, name=None):
+        super().__init__(n_a, n_s, n_step, 'fc', name)
+        self.n_fc = n_fc0
+        self.obs = tf.placeholder(tf.float32, [None, n_s])
+        with tf.variable_scope(self.name):
+            # pi and v use separate nets
+            self.pi = self._build_net(n_fc, 'pi')
+            self.v = self._build_net(n_fc, 'v')
+
+    def _build_net(self, n_fc, out_type):
+        h = fc(self.obs, out_type + '_fc0', self.n_fc)
+        return self._build_fc_net(h, n_fc, out_type)
+
+    def forward(self, sess, ob, done, out_type='pv'):
+        outs = self._get_forward_outs(out_type)
+        out_values = sess.run(outs, {self.obs:[ob]})
+        return self._return_forward_outs(out_values)
+
+    def backward(self, sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
+                 summary_writer=None, global_step=None):
+        summary, _ = sess.run([self.summary, self._train],
+                              {self.obs:obs,
+                               self.A:acts,
+                               self.ADV:Advs,
+                               self.R:Rs,
+                               self.lr:cur_lr,
+                               self.entropy_coef:cur_beta})
+        if summary_writer is not None:
+            summary_writer.add_summary(summary, global_step=global_step)

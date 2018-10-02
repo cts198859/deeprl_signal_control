@@ -7,6 +7,7 @@ import os
 from agents.utils import *
 from agents.policies import *
 import logging
+import multiprocessing as mp
 import numpy as np
 import tensorflow as tf
 
@@ -35,24 +36,16 @@ class A2C:
             self._init_train(model_config)
         self.sess.run(tf.global_variables_initializer())
 
-    @staticmethod
-    def _init_policy(n_s, n_a, n_f, model_config, agent_name=None):
+    def _init_policy(self, n_s, n_a, n_f, model_config, agent_name=None):
         n_step = model_config.getint('batch_size')
         n_h = model_config.getint('num_h')
-        policy_name = model_config.get('policy')
-        if policy_name == 'lstm':
-            n_lstm = model_config.getint('num_lstm')
-            policy = LstmPolicy(n_s, n_a, n_step, n_fc=n_h,
-                                n_lstm=n_lstm, name=agent_name)
-        elif policy_name == 'fc':
+        n_lstm = model_config.getint('num_lstm')
+        if self.name == 'ma2c':
             n_fc = model_config.getint('num_fc')
-            policy = FcPolicy(n_s, n_a, n_step, n_fc0=n_fc,
-                              n_fc=n_h, name=agent_name)
-        elif policy_name == 'hybrid':
-            n_fc = model_config.getint('num_fc')
-            n_lstm = model_config.getint('num_lstm')
-            policy = HybridPolicy(n_s, n_a, n_f, n_step, n_fc0=n_fc,
-                                  n_lstm=n_lstm, n_fc=n_h, name=agent_name)
+            policy = HybridACPolicy(n_s, n_a, n_f, n_step, n_fc0=n_fc,
+                                    n_lstm=n_lstm, n_fc=n_h, name=agent_name)
+        else:
+            policy = LSTMACPolicy(n_s, n_a, n_step, n_fc=n_h, n_lstm=n_lstm, name=agent_name)
         return policy
 
     def _init_scheduler(self, model_config):
@@ -176,7 +169,7 @@ class IA2C(A2C):
             self.policy_ls[i].prepare_loss(v_coef, max_grad_norm, alpha, epsilon)
             self.trans_buffer_ls.append(OnPolicyBuffer(gamma))
 
-    def backward(self, R_ls, summary_writer=None, global_step=None):
+    def backward_forloop(self, R_ls, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)
         cur_beta = self.beta_scheduler.get(self.n_step)
         for i in range(self.n_agent):
@@ -200,6 +193,22 @@ class IA2C(A2C):
             return out
         else:
             return out1, out2
+
+    def backward(self, R_ls, summary_writer=None, global_step=None):
+        cur_lr = self.lr_scheduler.get(self.n_step)
+        cur_beta = self.beta_scheduler.get(self.n_step)
+
+        def worker(i):
+            obs, acts, dones, Rs, Advs = self.trans_buffer_ls[i].sample_transition(R_ls[i])
+            self.policy_ls[i].backward(self.sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
+                                       summary_writer=summary_writer, global_step=global_step)
+        mps = []
+        for i in range(self.n_agent):
+            p = mp.Process(target=worker, args=(i))
+            p.start()
+            mps.append(p)
+        for p in mps:
+            p.join()
 
     def add_transition(self, obs, actions, rewards, values, done):
         if (self.reward_norm):

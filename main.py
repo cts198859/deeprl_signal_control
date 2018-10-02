@@ -9,8 +9,8 @@ import logging
 import tensorflow as tf
 import threading
 from envs.small_grid_env import SmallGridEnv, SmallGridController
-from envs.large_grid_env import LargeGridEnv, LargeGridController 
-from agents.models import A2C, IA2C, MA2C
+from envs.large_grid_env import LargeGridEnv, LargeGridController
+from agents.models import A2C, IA2C, MA2C, IQL
 from utils import (Counter, Trainer, Tester, Evaluator,
                    check_dir, copy_file, find_file,
                    init_dir, init_log, init_test_flag,
@@ -49,14 +49,14 @@ def init_env(config, port=0, naive_policy=False):
             return SmallGridEnv(config, port=port)
         else:
             env = SmallGridEnv(config, port=port)
-            policy = SmallGridController(env.control_nodes)
+            policy = SmallGridController(env.node_names)
             return env, policy
     elif config.get('scenario') == 'large_grid':
         if not naive_policy:
             return LargeGridEnv(config, port=port)
         else:
             env = LargeGridEnv(config, port=port)
-            policy = LargeGridController(env.control_nodes)
+            policy = LargeGridController(env.node_names)
             return env, policy
     else:
         if not naive_policy:
@@ -90,13 +90,13 @@ def train(args):
     seed = config.getint('ENV_CONFIG', 'seed')
     coord = tf.train.Coordinator()
 
-    if env.coop_level == 'global':
+    if env.agent == 'a2c':
         model = A2C(env.n_s, env.n_a, total_step,
                     config['MODEL_CONFIG'], seed=seed)
-    elif env.coop_level == 'local':
+    elif env.agent == 'ia2c':
         model = IA2C(env.n_s_ls, env.n_a_ls, total_step,
                      config['MODEL_CONFIG'], seed=seed)
-    elif env.coop_level == 'neighbor':
+    elif env.agent == 'ma2c':
         model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, total_step,
                      config['MODEL_CONFIG'], seed=seed)
 
@@ -145,24 +145,24 @@ def evaluate_fn(agent_dir, output_dir, seeds, port):
     config.read(config_dir)
 
     # init env
-    env, naive_policy = init_env(config['ENV_CONFIG'], port=port, naive_policy=True)
+    env, greedy_policy = init_env(config['ENV_CONFIG'], port=port, naive_policy=True)
     logging.info('Evaluation: s dim: %d, a dim %d, s dim ls: %r, a dim ls: %r' %
                  (env.n_s, env.n_a, env.n_s_ls, env.n_a_ls))
     env.init_test_seeds(seeds)
 
     # load model for agent
-    if agent != 'naive':
+    if agent != 'greedy':
         # init centralized or multi agent
-        if env.coop_level == 'global':
+        if env.agent == 'a2c':
             model = A2C(env.n_s, env.n_a, 0, config['MODEL_CONFIG'])
-        elif env.coop_level == 'local':
+        elif env.agent == 'ia2c':
             model = IA2C(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'])
-        else:
+        elif env.agent == 'ma2c':
             model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, 0, config['MODEL_CONFIG'])
         if not model.load(agent_dir + '/'):
             return
     else:
-        model = naive_policy
+        model = greedy_policy
 
     # collect evaluation data
     evaluator = Evaluator(env, model, output_dir)
