@@ -243,7 +243,7 @@ class TrafficSimulator:
     def _init_policy(self):
         policy = []
         for node_name in self.node_names:
-            phase_num = self.nodes[node_name].phase_num
+            phase_num = self.nodes[node_name].n_a
             p = 1. / phase_num
             policy.append(np.array([p] * phase_num))
         return policy
