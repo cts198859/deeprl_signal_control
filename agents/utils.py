@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import tensorflow as tf
 
 """
@@ -226,6 +227,40 @@ class OnPolicyBuffer(TransBuffer):
         self.reset(self.dones[-1])
         return obs, acts, dones, Rs, Advs
 
+
+class ReplayBuffer(TransBuffer):
+    def __init__(self, buffer_size, batch_size):
+        self.buffer_size = buffer_size
+        self.batch_size = batch_size
+        self.cum_size = 0
+        self.buffer = []
+
+    def add_transition(self, ob, a, r, next_ob, done):
+        experience = (ob, a, r, next_ob, done)
+        if self.cum_size < self.buffer_size:
+            self.buffer.append(experience)
+        else:
+            ind = int(self.cum_size % self.buffer_size)
+            self.buffer[ind] = experience
+        self.cum_size += 1
+
+    def reset(self):
+        self.buffer = []
+        self.cum_size = 0
+
+    def sample_transition(self):
+        # Randomly sample batch_size examples
+        minibatch = random.sample(self.buffer, self.batch_size)
+        state_batch = np.asarray([data[0] for data in minibatch])
+        action_batch = np.asarray([data[1] for data in minibatch])
+        next_state_batch = np.asarray([data[3] for data in minibatch])
+        reward_batch = np.asarray([data[2] for data in minibatch])
+        done_batch = np.asarray([data[4] for data in minibatch])
+        return state_batch, action_batch, next_state_batch, reward_batch, done_batch
+
+    @property
+    def size(self):
+        return min(self.buffer_size, self.cum_size)
 
 """
 util functions

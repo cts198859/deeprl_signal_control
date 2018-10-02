@@ -17,6 +17,7 @@ class A2C:
         # load parameters
         self.name = 'a2c'
         self.n_agent = 1
+        # init reward norm/clip
         self.reward_clip = model_config.getfloat('reward_clip')
         self.reward_norm = model_config.getfloat('reward_norm')
         self.n_s = n_s
@@ -37,23 +38,17 @@ class A2C:
         self.sess.run(tf.global_variables_initializer())
 
     def _init_policy(self, n_s, n_a, n_f, model_config, agent_name=None):
-        n_step = model_config.getint('batch_size')
         n_h = model_config.getint('num_h')
         n_lstm = model_config.getint('num_lstm')
         if self.name == 'ma2c':
             n_fc = model_config.getint('num_fc')
-            policy = HybridACPolicy(n_s, n_a, n_f, n_step, n_fc0=n_fc,
+            policy = HybridACPolicy(n_s, n_a, n_f, self.n_step, n_fc0=n_fc,
                                     n_lstm=n_lstm, n_fc=n_h, name=agent_name)
         else:
-            policy = LSTMACPolicy(n_s, n_a, n_step, n_fc=n_h, n_lstm=n_lstm, name=agent_name)
+            policy = LSTMACPolicy(n_s, n_a, self.n_step, n_fc=n_h, n_lstm=n_lstm, name=agent_name)
         return policy
 
     def _init_scheduler(self, model_config):
-        # init reward norm/clip
-        self.reward_clip = model_config.getfloat('reward_clip')
-        self.reward_norm = model_config.getfloat('reward_norm')
-
-        # init scheduler
         lr_init = model_config.getfloat('lr_init')
         lr_decay = model_config.get('lr_decay')
         beta_init = model_config.getfloat('entropy_coef_init')
@@ -250,3 +245,96 @@ class MA2C(IA2C):
             self._init_scheduler(model_config)
             self._init_train(model_config)
         self.sess.run(tf.global_variables_initializer())
+
+
+class IQL:
+    def __init__(self, n_s_ls, n_a_ls, total_step, model_config, seed=0, model_type='dqn'):
+        self.name = 'iql'
+        self.model_type = model_type
+        self.agents = []
+        self.n_agent = len(n_s_ls)
+        self.reward_clip = model_config.getfloat('reward_clip')
+        self.reward_norm = model_config.getfloat('reward_norm')
+        self.n_s_ls = n_s_ls
+        self.n_a_ls = n_a_ls
+        self.n_step = model_config.getint('batch_size')
+        # init tf
+        tf.reset_default_graph()
+        tf.set_random_seed(seed)
+        config = tf.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.Session(config=config)
+        self.policy_ls = []
+        for i, (n_s, n_a) in enumerate(zip(self.n_s_ls, self.n_a_ls)):
+            # agent_name is needed to differentiate multi-agents
+            self.policy_ls.append(self._init_policy(n_s, n_a, model_config, agent_name=str(i)))
+        self.saver = tf.train.Saver(max_to_keep=5)
+        if total_step:
+            # training
+            self.total_step = total_step
+            self._init_scheduler(model_config)
+            self._init_train(model_config)
+        self.sess.run(tf.global_variables_initializer())
+
+    def _init_policy(self, n_s, n_a, model_config, agent_name=None):
+        if self.model_type == 'dqn':
+            n_h = model_config.getint('num_h')
+            n_fc = model_config.getint('num_fc')
+            policy = DeepQPolicy(n_s, n_a, n_step, n_fc0=n_fc, n_fc=n_h, name=agent_name)
+        else:
+            policy = LRQPolicy(n_s, n_a, n_step, name=agent_name)
+        return policy
+
+    def _init_scheduler(self, model_config):
+        lr_init = model_config.getfloat('lr_init')
+        lr_decay = model_config.get('lr_decay')
+        eps_init = model_config.getfloat('epsilon_init')
+        eps_decay = model_config.get('epsilon_decay')
+        if lr_decay == 'constant':
+            self.lr_scheduler = Scheduler(lr_init, decay=lr_decay)
+        else:
+            lr_min = model_config.getfloat('lr_min')
+            self.lr_scheduler = Scheduler(lr_init, lr_min, self.total_step, decay=lr_decay)
+        if eps_decay == 'constant':
+            self.eps_scheduler = Scheduler(eps_init, decay=eps_decay)
+        else:
+            eps_min = model_config.getfloat('epsilon_min')
+            eps_ratio = model_config.getfloat('epsilon_ratio')
+            self.eps_scheduler = Scheduler(eps_init, eps_min, self.total_step * eps_ratio,
+                                           decay=eps_decay)
+
+    def _init_train(self, model_config):
+        # init loss
+        max_grad_norm = model_config.getfloat('max_grad_norm')
+        gamma = model_config.getfloat('gamma')
+        buffer_size = model_config.getfloat('buffer_size')
+        self.trans_buffer_ls = []
+        for i in range(self.n_agent):
+            self.policy_ls[i].prepare_loss(gamma, max_grad_norm)
+            self.trans_buffer_ls.append(ReplayBuffer(buffer_size, self.n_step))
+
+    def backward(self, summary_writer=None, global_step=None):
+        cur_lr = self.lr_scheduler.get(self.n_step)
+
+        def worker(i):
+            for _ in range(self.n_step):
+                obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
+                self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
+                                           summary_writer=summary_writer, global_step=global_step)
+        mps = []
+        for i in range(self.n_agent):
+            p = mp.Process(target=worker, args=(i))
+            p.start()
+            mps.append(p)
+        for p in mps:
+            p.join()
+
+    def forward(self, ob, mode='act'):
+        eps = self.eps_scheduler.get(1)
+        action = []
+        for i in range(self.n_agent):
+            if (mode == 'explore') and (np.random.random() < eps):
+                action.append(np.random.randint(self.n_a_ls[i]))
+            else:
+                qs = self.policy_ls[i].forward(self.sess, ob)
+                action.append(np.argmax(qs))
+        return action

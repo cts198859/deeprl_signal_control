@@ -108,7 +108,7 @@ class Trainer():
         self.cur_step = 0
         self.global_counter = global_counter
         self.env = env
-        self.coop_level = self.env.coop_level
+        self.agent = self.env.agent
         self.model = model
         self.sess = self.model.sess
         self.n_step = self.model.n_step
@@ -127,31 +127,34 @@ class Trainer():
         ob = prev_ob
         done = prev_done
         for _ in range(self.n_step):
-            policy, value = self.model.forward(ob, done)
-            # need to update fingerprint before calling step
-            if self.coop_level == 'neighbor':
-                self.env.update_fingerprint(policy)
-            if self.coop_level == 'global':
-                action = np.random.choice(np.arange(len(policy)), p=policy)
+            if self.agent.endswith('a2c'):
+                policy, value = self.model.forward(ob, done)
+                # need to update fingerprint before calling step
+                if self.agent == 'ma2c':
+                    self.env.update_fingerprint(policy)
+                if self.agent == 'a2c':
+                    action = np.random.choice(np.arange(len(policy)), p=policy)
+                else:
+                    action = []
+                    for pi in policy:
+                        action.append(np.random.choice(np.arange(len(pi)), p=pi))
             else:
-                action = []
-                for pi in policy:
-                    action.append(np.random.choice(np.arange(len(pi)), p=pi))
+                action = self.model.forward(ob, mode='explore')
+                policy = []
             next_ob, reward, done, global_reward = self.env.step(action)
             cum_reward += global_reward
             global_step = self.global_counter.next()
             self.cur_step += 1
-            self.model.add_transition(ob, action, reward, value, done)
+            if self.agent.endswith('a2c'):
+                self.model.add_transition(ob, action, reward, value, done)
+            else:
+                self.model.add_transition(ob, action, reward, next_ob, done)
             # logging
             if self.global_counter.should_log():
-                if self.coop_level == 'global':
-                    global_value = value
-                else:
-                    global_value = np.sum(np.array(value))
                 logging.info('''Training: global step %d, episode step %d,
-                                   ob: %s, a: %s, pi: %s, v: %.2f, r: %.2f, done: %r''' %
+                                   ob: %s, a: %s, pi: %s, r: %.2f, done: %r''' %
                              (global_step, self.cur_step,
-                              str(ob), str(action), str(policy), global_value, global_reward, done))
+                              str(ob), str(action), str(policy), global_reward, done))
             # termination
             if done:
                 self.env.terminate()
@@ -162,10 +165,13 @@ class Trainer():
                 self.cur_step = 0
             else:
                 ob = next_ob
-        if done:
-            R = 0 if self.coop_level == 'global' else [0] * self.model.n_agent
+        if self.agent.endswith('a2c'):
+            if done:
+                R = 0 if self.agent == 'a2c' else [0] * self.model.n_agent
+            else:
+                R = self.model.forward(ob, False, 'v')
         else:
-            R = self.model.forward(ob, False, 'v')
+            R = 0
         return ob, done, R, cum_reward
 
     def run(self, coord):
@@ -175,7 +181,10 @@ class Trainer():
         while not coord.should_stop():
             ob, done, R, cum_reward = self.explore(ob, done, cum_reward)
             global_step = self.global_counter.cur_step
-            self.model.backward(R, self.summary_writer, global_step)
+            if self.agent.endswith('a2c'):
+                self.model.backward(R, self.summary_writer, global_step)
+            else:
+                self.model.backward(self.summary_writer, global_step)
             self.summary_writer.flush()
             if (self.global_counter.should_stop()) and (not coord.should_stop()):
                 self.env.terminate()
@@ -185,10 +194,12 @@ class Trainer():
 
 
 class Tester(Trainer):
-    def __init__(self, env, model, global_counter, summary_writer):
+    def __init__(self, env, model, global_counter, summary_writer, output_path):
         super().__init__(env, model, global_counter, summary_writer)
         self.env.train_mode = False
         self.test_num = self.env.test_num
+        self.output_path = output_path
+        self.data = []
         logging.info('Testing: total test num: %d' % self.test_num)
 
     def _init_summary(self):
@@ -199,11 +210,11 @@ class Tester(Trainer):
         ob = self.env.reset(test_ind=test_ind)
         rewards = []
         while True:
-            if self.coop_level != 'naive':
+            if self.agent.endswith('a2c'):
                 policy = self.model.forward(ob, False, 'p')
-                if self.coop_level == 'neighbor':
+                if self.agent == 'ma2c':
                     self.env.update_fingerprint(policy)
-                if self.coop_level == 'global':
+                if self.agent == 'a2c':
                     action = np.argmax(np.array(policy))
                 else:
                     action = []
@@ -219,12 +230,12 @@ class Tester(Trainer):
         total_reward = np.mean(np.array(rewards))
         return total_reward
 
-    def run_offline(self, output_path):
+    def run_offline(self):
         # enable traffic measurments for offline test
         is_record = True
         record_stats = False
         self.env.cur_episode = 0
-        self.env.init_data(is_record, record_stats, output_path)
+        self.env.init_data(is_record, record_stats, self.output_path)
         rewards = []
         for test_ind in range(self.test_num):
             rewards.append(self.perform(test_ind))
@@ -241,23 +252,30 @@ class Tester(Trainer):
             time.sleep(30)
             if self.global_counter.should_test():
                 rewards = []
-                for test_ind in range(self.test_num):
-                    rewards.append(self.perform(test_ind))
-                    self.env.terminate()
-                avg_reward = np.mean(np.array(rewards))
                 global_step = self.global_counter.cur_step
+                for test_ind in range(self.test_num):
+                    cur_reward = self.perform(test_ind)
+                    self.env.terminate()
+                    rewards.append(cur_reward)
+                    log = {'agent': self.agent,
+                           'step': global_step,
+                           'test_id': test_ind,
+                           'reward': cur_reward}
+                    self.data.append(log)
+                avg_reward = np.mean(np.array(rewards))
                 self._add_summary(avg_reward, global_step)
                 logging.info('Testing: global step %d, avg R: %.2f' %
                              (global_step, avg_reward))
                 # self.global_counter.update_test(avg_reward)
+        df = pd.DataFrame(self.data)
+        df.to_csv(self.output_path + 'train_reward.csv')
+
 
 class Evaluator(Tester):
     def __init__(self, env, model, output_path):
         self.env = env
         self.model = model
-        if self.model.name == 'naive':
-            self.env.coop_level = 'naive'
-        self.coop_level = self.env.coop_level
+        self.agent = self.env.agent
         self.env.train_mode = False
         self.test_num = self.env.test_num
         self.output_path = output_path

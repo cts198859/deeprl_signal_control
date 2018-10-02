@@ -153,17 +153,17 @@ def evaluate_fn(agent_dir, output_dir, seeds, port):
     # load model for agent
     if agent != 'greedy':
         # init centralized or multi agent
-        if env.agent == 'a2c':
+        if agent == 'a2c':
             model = A2C(env.n_s, env.n_a, 0, config['MODEL_CONFIG'])
-        elif env.agent == 'ia2c':
+        elif agent == 'ia2c':
             model = IA2C(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'])
-        elif env.agent == 'ma2c':
+        elif agent == 'ma2c':
             model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, 0, config['MODEL_CONFIG'])
         if not model.load(agent_dir + '/'):
             return
     else:
         model = greedy_policy
-
+    env.agent = agent
     # collect evaluation data
     evaluator = Evaluator(env, model, output_dir)
     evaluator.run()
