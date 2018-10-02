@@ -106,7 +106,7 @@ def train(args):
     if in_test or post_test:
         # assign a different port for test env
         test_env = init_env(config['ENV_CONFIG'], port=1)
-        tester = Tester(test_env, model, global_counter, summary_writer)
+        tester = Tester(test_env, model, global_counter, summary_writer, dirs['data'])
 
     def train_fn():
         trainer.run(coord)
