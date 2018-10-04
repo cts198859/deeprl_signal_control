@@ -127,11 +127,16 @@ class Trainer():
         self._init_summary()
 
     def _init_summary(self):
-        self.reward = tf.placeholder(tf.float32, [])
-        self.summary = tf.summary.scalar('train_reward', self.reward)
+        self.train_reward = tf.placeholder(tf.float32, [])
+        self.train_summry = tf.summary.scalar('train_reward', self.train_reward)
+        self.test_reward = tf.placeholder(tf.float32, [])
+        self.test_summary = tf.summary.scalar('test_reward', self.test_reward)
 
-    def _add_summary(self, reward, global_step):
-        summ = self.sess.run(self.summary, {self.reward:reward})
+    def _add_summary(self, reward, global_step, is_train=True):
+        if is_train:
+            summ = self.sess.run(self.train_summary, {self.train_reward: reward})
+        else:
+            summ = self.sess.run(self.test_summary, {self.test_reward: reward})
         self.summary_writer.add_summary(summ, global_step=global_step)
 
     def explore(self, prev_ob, prev_done, cum_reward):
@@ -245,7 +250,7 @@ class Trainer():
                            'reward': cur_reward}
                     self.data.append(log)
                 avg_reward = np.mean(np.array(rewards))
-                self._add_summary(avg_reward, global_step)
+                self._add_summary(avg_reward, global_step, is_train=False)
                 logging.info('Testing: global step %d, avg R: %.2f' %
                              (global_step, avg_reward))
             # train
@@ -261,12 +266,12 @@ class Trainer():
                     self.model.backward(R, self.summary_writer, global_step)
                 else:
                     self.model.backward(self.summary_writer, global_step)
-                self.summary_writer.flush()
                 # termination
                 if done:
                     self.env.terminate()
                     self._add_summary(cum_reward / float(self.cur_step), global_step)
                     break
+            self.summary_writer.flush()
         if self.run_test:
             df = pd.DataFrame(self.data)
             df.to_csv(self.output_path + 'train_reward.csv')

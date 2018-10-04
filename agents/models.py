@@ -45,7 +45,7 @@ class A2C:
             policy = HybridACPolicy(n_s, n_a, n_f, self.n_step, n_fc0=n_fc,
                                     n_lstm=n_lstm, n_fc=n_h, name=agent_name)
         else:
-            policy = LSTMACPolicy(n_s, n_a, self.n_step, n_fc=n_h, n_lstm=n_lstm, name=agent_name)
+            policy = LstmACPolicy(n_s, n_a, self.n_step, n_fc=n_h, n_lstm=n_lstm, name=agent_name)
         return policy
 
     def _init_scheduler(self, model_config):
