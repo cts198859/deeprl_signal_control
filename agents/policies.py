@@ -61,15 +61,16 @@ class ACPolicy:
                                                    epsilon=epsilon)
         self._train = self.optimizer.apply_gradients(list(zip(grads, wts)))
         # monitor training
-        summaries = []
-        summaries.append(tf.summary.scalar('loss/%s_entropy_loss' % self.name, entropy_loss))
-        summaries.append(tf.summary.scalar('loss/%s_policy_loss' % self.name, policy_loss))
-        summaries.append(tf.summary.scalar('loss/%s_value_loss' % self.name, value_loss))
-        summaries.append(tf.summary.scalar('loss/%s_total_loss' % self.name, self.loss))
-        summaries.append(tf.summary.scalar('train/%s_lr' % self.name, self.lr))
-        summaries.append(tf.summary.scalar('train/%s_entropy_beta' % self.name, self.entropy_coef))
-        summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
-        self.summary = tf.summary.merge(summaries)
+        if self.name.endswith('_0'):
+            summaries = []
+            # summaries.append(tf.summary.scalar('loss/%s_entropy_loss' % self.name, entropy_loss))
+            summaries.append(tf.summary.scalar('loss/%s_policy_loss' % self.name, policy_loss))
+            summaries.append(tf.summary.scalar('loss/%s_value_loss' % self.name, value_loss))
+            summaries.append(tf.summary.scalar('loss/%s_total_loss' % self.name, self.loss))
+            # summaries.append(tf.summary.scalar('train/%s_lr' % self.name, self.lr))
+            # summaries.append(tf.summary.scalar('train/%s_entropy_beta' % self.name, self.entropy_coef))
+            summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
+            self.summary = tf.summary.merge(summaries)
 
 
 class LstmACPolicy(ACPolicy):
@@ -129,18 +130,22 @@ class LstmACPolicy(ACPolicy):
 
     def backward(self, sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
                  summary_writer=None, global_step=None):
-        summary, _ = sess.run([self.summary, self._train],
-                              {self.ob_bw:obs,
-                               self.done_bw:dones,
-                               self.states:self.states_bw,
-                               self.A:acts,
-                               self.ADV:Advs,
-                               self.R:Rs,
-                               self.lr:cur_lr,
-                               self.entropy_coef:cur_beta})
+        if summary_writer is None:
+            ops = self._train
+        else:
+            ops = [self.summary, self._train]
+        outs = sess.run(ops,
+                        {self.ob_bw: obs,
+                         self.done_bw: dones,
+                         self.states: self.states_bw,
+                         self.A: acts,
+                         self.ADV: Advs,
+                         self.R: Rs,
+                         self.lr: cur_lr,
+                         self.entropy_coef: cur_beta})
         self.states_bw = np.copy(self.states_fw)
         if summary_writer is not None:
-            summary_writer.add_summary(summary, global_step=global_step)
+            summary_writer.add_summary(outs[0], global_step=global_step)
 
     def _get_forward_outs(self, out_type):
         outs = []
@@ -236,11 +241,12 @@ class QPolicy:
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         self._train = self.optimizer.apply_gradients(list(zip(grads, wts)))
         # monitor training
-        summaries = []
-        summaries.append(tf.summary.scalar('train/%s_loss' % self.name, self.loss))
-        summaries.append(tf.summary.scalar('train/%s_lr' % self.name, self.lr))
-        summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
-        self.summary = tf.summary.merge(summaries)
+        if self.name.endswith('_0'):
+            summaries = []
+            summaries.append(tf.summary.scalar('train/%s_loss' % self.name, self.loss))
+            # summaries.append(tf.summary.scalar('train/%s_lr' % self.name, self.lr))
+            summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
+            self.summary = tf.summary.merge(summaries)
 
 
 class DeepQPolicy(QPolicy):
@@ -260,15 +266,19 @@ class DeepQPolicy(QPolicy):
 
     def backward(self, sess, obs, acts, next_obs, dones, rs, cur_lr,
                  summary_writer=None, global_step=None):
-        summary, _ = sess.run([self.summary, self._train],
-                              {self.S: obs,
-                               self.A: acts,
-                               self.S1: next_obs,
-                               self.DONE: dones,
-                               self.R: rs,
-                               self.lr: cur_lr})
+        if summary_writer is None:
+            ops = self._train
+        else:
+            ops = [self.summary, self._train]
+        outs = sess.run(ops,
+                        {self.S: obs,
+                         self.A: acts,
+                         self.S1: next_obs,
+                         self.DONE: dones,
+                         self.R: rs,
+                         self.lr: cur_lr})
         if summary_writer is not None:
-            summary_writer.add_summary(summary, global_step=global_step)
+            summary_writer.add_summary(outs[0], global_step=global_step)
 
 
 class LRQPolicy(DeepQPolicy):

@@ -214,12 +214,12 @@ class LargeGridEnv(TrafficSimulator):
         self.phase_map = LargeGridPhase()
         self.state_names = STATE_NAMES
 
-    def _init_sim_config(self):
+    def _init_sim_config(self, seed):
         return gen_rou_file(self.data_path,
                             self.peak_flow1,
                             self.peak_flow2,
                             self.init_density,
-                            seed=self.seed,
+                            seed=seed,
                             thread=self.sim_thread)
 
     # def _init_sim_traffic(self):

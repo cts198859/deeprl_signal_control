@@ -164,13 +164,16 @@ class IA2C(A2C):
             self.policy_ls[i].prepare_loss(v_coef, max_grad_norm, alpha, epsilon)
             self.trans_buffer_ls.append(OnPolicyBuffer(gamma))
 
-    def backward_forloop(self, R_ls, summary_writer=None, global_step=None):
+    def backward(self, R_ls, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)
         cur_beta = self.beta_scheduler.get(self.n_step)
         for i in range(self.n_agent):
             obs, acts, dones, Rs, Advs = self.trans_buffer_ls[i].sample_transition(R_ls[i])
-            self.policy_ls[i].backward(self.sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
-                                       summary_writer=summary_writer, global_step=global_step)
+            if i == 0:
+                self.policy_ls[i].backward(self.sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
+                                           summary_writer=summary_writer, global_step=global_step)
+            else:
+                self.policy_ls[i].backward(self.sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta)
 
     def forward(self, obs, done, out_type='pv'):
         if len(out_type) == 1:
@@ -189,7 +192,7 @@ class IA2C(A2C):
         else:
             return out1, out2
 
-    def backward(self, R_ls, summary_writer=None, global_step=None):
+    def backward_mp(self, R_ls, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)
         cur_beta = self.beta_scheduler.get(self.n_step)
 
@@ -314,19 +317,14 @@ class IQL:
 
     def backward(self, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)
-
-        def worker(i):
-            for _ in range(self.n_step):
-                obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
-                self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
-                                           summary_writer=summary_writer, global_step=global_step)
-        mps = []
         for i in range(self.n_agent):
-            p = mp.Process(target=worker, args=(i))
-            p.start()
-            mps.append(p)
-        for p in mps:
-            p.join()
+            for k in range(self.n_step):
+                obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
+                if i == 0:
+                    self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
+                                               summary_writer=summary_writer, global_step=global_step + k)
+                else:
+                    self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
 
     def forward(self, ob, mode='act'):
         eps = self.eps_scheduler.get(1)

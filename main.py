@@ -88,7 +88,7 @@ def train(args):
 
     # init centralized or multi agent
     seed = config.getint('ENV_CONFIG', 'seed')
-    coord = tf.train.Coordinator()
+    # coord = tf.train.Coordinator()
 
     if env.agent == 'a2c':
         model = A2C(env.n_s, env.n_a, total_step,
@@ -100,30 +100,33 @@ def train(args):
         model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, total_step,
                      config['MODEL_CONFIG'], seed=seed)
 
-    threads = []
+    # disable multi-threading for safe SUMO implementation
+    # threads = []
     summary_writer = tf.summary.FileWriter(dirs['log'])
-    trainer = Trainer(env, model, global_counter, summary_writer)
-    if in_test or post_test:
-        # assign a different port for test env
-        test_env = init_env(config['ENV_CONFIG'], port=1)
-        tester = Tester(test_env, model, global_counter, summary_writer, dirs['data'])
+    trainer = Trainer(env, model, global_counter, summary_writer, in_test, output_path=dirs['data'])
+    trainer.run()
+    # if in_test or post_test:
+    #     # assign a different port for test env
+    #     test_env = init_env(config['ENV_CONFIG'], port=1)
+    #     tester = Tester(test_env, model, global_counter, summary_writer, dirs['data'])
 
-    def train_fn():
-        trainer.run(coord)
+    # def train_fn():
+    #     trainer.run(coord)
 
-    thread = threading.Thread(target=train_fn)
-    thread.start()
-    threads.append(thread)
-    if in_test:
-        def test_fn():
-            tester.run_online(coord)
-        thread = threading.Thread(target=test_fn)
-        thread.start()
-        threads.append(thread)
-    coord.join(threads)
+    # thread = threading.Thread(target=train_fn)
+    # thread.start()
+    # threads.append(thread)
+    # if in_test:
+    #     def test_fn():
+    #         tester.run_online(coord)
+    #     thread = threading.Thread(target=test_fn)
+    #     thread.start()
+    #     threads.append(thread)
+    # coord.join(threads)
 
     # post-training test
     if post_test:
+        tester = Tester(env, model, global_counter, summary_writer, dirs['data'])
         tester.run_offline(dirs['data'])
 
     # save model

@@ -84,6 +84,7 @@ class TrafficSimulator:
         self.control_interval_sec = config.getint('control_interval_sec')
         self.yellow_interval_sec = config.getint('yellow_interval_sec')
         self.episode_length_sec = config.getint('episode_length_sec')
+        self.T = np.ceil(self.episode_length_sec / self.control_interval_sec)
         self.port = DEFAULT_PORT + port
         self.sim_thread = port
         self.obj = config.get('objective')
@@ -252,14 +253,14 @@ class TrafficSimulator:
             policy.append(np.array([p] * phase_num))
         return policy
 
-    def _init_sim(self, gui=False):
-        sumocfg_file = self._init_sim_config()
+    def _init_sim(self, seed, gui=False):
+        sumocfg_file = self._init_sim_config(seed)
         if gui:
             app = 'sumo-gui'
         else:
             app = 'sumo'
         command = [checkBinary(app), '-c', sumocfg_file]
-        command += ['--seed', str(self.seed)]
+        command += ['--seed', str(seed)]
         command += ['--remote-port', str(self.port)]
         command += ['--no-step-log', 'True']
         if self.name != 'large_grid':
@@ -273,8 +274,8 @@ class TrafficSimulator:
             command += ['--tripinfo-output',
                         self.output_path + ('%s_%s_trip.xml' % (self.name, self.agent))]
         subprocess.Popen(command)
-        # wait 5s to establish the traci server
-        time.sleep(5)
+        # wait 2s to establish the traci server
+        time.sleep(2)
         self.sim = traci.connect(port=self.port)
 
     def _init_sim_config(self):
@@ -478,10 +479,12 @@ class TrafficSimulator:
     def reset(self, gui=False, test_ind=0):
         # have to terminate previous sim before calling reset
         self._reset_state()
-        if not self.train_mode:
-            self.seed = self.test_seeds[test_ind]
+        if self.train_mode:
+            seed = self.seed
+        else:
+            seed = self.test_seeds[test_ind]
         # self._init_sim(gui=True)
-        self._init_sim(gui)
+        self._init_sim(seed, gui=gui)
         self.cur_sec = 0
         self.cur_episode += 1
         # initialize fingerprint
@@ -489,7 +492,7 @@ class TrafficSimulator:
             self.update_fingerprint(self._init_policy())
         self._init_sim_traffic()
         # next environment random condition should be different
-        self.seed += 10
+        self.seed += 1
         return self._get_state()
 
     def terminate(self):

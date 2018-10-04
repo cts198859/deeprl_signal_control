@@ -76,12 +76,16 @@ class Counter:
         self.test_step = test_step
         self.log_step = log_step
         self.stop = False
+        self.init_test = True
 
     def next(self):
         self.cur_step = next(self.counter)
         return self.cur_step
 
     def should_test(self):
+        if self.init_test:
+            self.init_test = False
+            return True
         test = False
         if (self.cur_step - self.cur_test_step) >= self.test_step:
             test = True
@@ -104,7 +108,7 @@ class Counter:
 
 
 class Trainer():
-    def __init__(self, env, model, global_counter, summary_writer):
+    def __init__(self, env, model, global_counter, summary_writer, run_test, output_path=None):
         self.cur_step = 0
         self.global_counter = global_counter
         self.env = env
@@ -113,6 +117,13 @@ class Trainer():
         self.sess = self.model.sess
         self.n_step = self.model.n_step
         self.summary_writer = summary_writer
+        self.run_test = run_test
+        assert self.env.T % self.n_step == 0
+        if run_test:
+            self.test_num = self.env.test_num
+            self.output_path = output_path
+            self.data = []
+            logging.info('Testing: total test num: %d' % self.test_num)
         self._init_summary()
 
     def _init_summary(self):
@@ -155,16 +166,16 @@ class Trainer():
                                    ob: %s, a: %s, pi: %s, r: %.2f, done: %r''' %
                              (global_step, self.cur_step,
                               str(ob), str(action), str(policy), global_reward, done))
-            # termination
-            if done:
-                self.env.terminate()
-                time.sleep(2)
-                ob = self.env.reset()
-                self._add_summary(cum_reward / float(self.cur_step), global_step)
-                cum_reward = 0
-                self.cur_step = 0
-            else:
-                ob = next_ob
+            # # termination
+            # if done:
+            #     self.env.terminate()
+            #     time.sleep(2)
+            #     ob = self.env.reset()
+            #     self._add_summary(cum_reward / float(self.cur_step), global_step)
+            #     cum_reward = 0
+            #     self.cur_step = 0
+            # else:
+            ob = next_ob
         if self.agent.endswith('a2c'):
             if done:
                 R = 0 if self.agent == 'a2c' else [0] * self.model.n_agent
@@ -173,38 +184,6 @@ class Trainer():
         else:
             R = 0
         return ob, done, R, cum_reward
-
-    def run(self, coord):
-        ob = self.env.reset()
-        done = False
-        cum_reward = 0
-        while not coord.should_stop():
-            ob, done, R, cum_reward = self.explore(ob, done, cum_reward)
-            global_step = self.global_counter.cur_step
-            if self.agent.endswith('a2c'):
-                self.model.backward(R, self.summary_writer, global_step)
-            else:
-                self.model.backward(self.summary_writer, global_step)
-            self.summary_writer.flush()
-            if (self.global_counter.should_stop()) and (not coord.should_stop()):
-                self.env.terminate()
-                coord.request_stop()
-                logging.info('Training: stop condition reached!')
-                return
-
-
-class Tester(Trainer):
-    def __init__(self, env, model, global_counter, summary_writer, output_path):
-        super().__init__(env, model, global_counter, summary_writer)
-        self.env.train_mode = False
-        self.test_num = self.env.test_num
-        self.output_path = output_path
-        self.data = []
-        logging.info('Testing: total test num: %d' % self.test_num)
-
-    def _init_summary(self):
-        self.reward = tf.placeholder(tf.float32, [])
-        self.summary = tf.summary.scalar('test_reward', self.reward)
 
     def perform(self, test_ind):
         ob = self.env.reset(test_ind=test_ind)
@@ -229,6 +208,82 @@ class Tester(Trainer):
             ob = next_ob
         total_reward = np.mean(np.array(rewards))
         return total_reward
+
+    def run_thread(self, coord):
+        '''Multi-threading is disabled'''
+        ob = self.env.reset()
+        done = False
+        cum_reward = 0
+        while not coord.should_stop():
+            ob, done, R, cum_reward = self.explore(ob, done, cum_reward)
+            global_step = self.global_counter.cur_step
+            if self.agent.endswith('a2c'):
+                self.model.backward(R, self.summary_writer, global_step)
+            else:
+                self.model.backward(self.summary_writer, global_step)
+            self.summary_writer.flush()
+            if (self.global_counter.should_stop()) and (not coord.should_stop()):
+                self.env.terminate()
+                coord.request_stop()
+                logging.info('Training: stop condition reached!')
+                return
+
+    def run(self):
+        while not self.global_counter.should_stop():
+            # test
+            if self.run_test and self.global_counter.should_test():
+                rewards = []
+                global_step = self.global_counter.cur_step
+                self.env.train_mode = False
+                for test_ind in range(self.test_num):
+                    cur_reward = self.perform(test_ind)
+                    self.env.terminate()
+                    rewards.append(cur_reward)
+                    log = {'agent': self.agent,
+                           'step': global_step,
+                           'test_id': test_ind,
+                           'reward': cur_reward}
+                    self.data.append(log)
+                avg_reward = np.mean(np.array(rewards))
+                self._add_summary(avg_reward, global_step)
+                logging.info('Testing: global step %d, avg R: %.2f' %
+                             (global_step, avg_reward))
+            # train
+            self.env.train_mode = True
+            ob = self.env.reset()
+            done = False
+            cum_reward = 0
+            self.cur_step = 0
+            while True:
+                ob, done, R, cum_reward = self.explore(ob, done, cum_reward)
+                global_step = self.global_counter.cur_step
+                if self.agent.endswith('a2c'):
+                    self.model.backward(R, self.summary_writer, global_step)
+                else:
+                    self.model.backward(self.summary_writer, global_step)
+                self.summary_writer.flush()
+                # termination
+                if done:
+                    self.env.terminate()
+                    self._add_summary(cum_reward / float(self.cur_step), global_step)
+                    break
+        if self.run_test:
+            df = pd.DataFrame(self.data)
+            df.to_csv(self.output_path + 'train_reward.csv')
+
+
+class Tester(Trainer):
+    def __init__(self, env, model, global_counter, summary_writer, output_path):
+        super().__init__(env, model, global_counter, summary_writer)
+        self.env.train_mode = False
+        self.test_num = self.env.test_num
+        self.output_path = output_path
+        self.data = []
+        logging.info('Testing: total test num: %d' % self.test_num)
+
+    def _init_summary(self):
+        self.reward = tf.placeholder(tf.float32, [])
+        self.summary = tf.summary.scalar('test_reward', self.reward)
 
     def run_offline(self):
         # enable traffic measurments for offline test
