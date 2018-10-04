@@ -17,8 +17,7 @@ class ACPolicy:
     def forward(self, ob, *_args, **_kwargs):
         raise NotImplementedError()
 
-    def _build_fc_net(self, h, n_fc, out_type):
-        h = fc(h, out_type + '_fc', n_fc)
+    def _build_out_net(self, h, out_type):
         if out_type == 'pi':
             pi = fc(h, out_type, self.n_a, act=tf.nn.softmax)
             return tf.squeeze(pi)
@@ -85,17 +84,17 @@ class LstmACPolicy(ACPolicy):
         self.states = tf.placeholder(tf.float32, [2, n_lstm * 2])
         with tf.variable_scope(self.name):
             # pi and v use separate nets
-            self.pi_fw, pi_state = self._build_net(n_fc, 'forward', 'pi')
-            self.v_fw, v_state = self._build_net(n_fc, 'forward', 'v')
+            self.pi_fw, pi_state = self._build_net('forward', 'pi')
+            self.v_fw, v_state = self._build_net('forward', 'v')
             pi_state = tf.expand_dims(pi_state, 0)
             v_state = tf.expand_dims(v_state, 0)
             self.new_states = tf.concat([pi_state, v_state], 0)
         with tf.variable_scope(self.name, reuse=True):
-            self.pi, _ = self._build_net(n_fc, 'backward', 'pi')
-            self.v, _ = self._build_net(n_fc, 'backward', 'v')
+            self.pi, _ = self._build_net('backward', 'pi')
+            self.v, _ = self._build_net('backward', 'v')
         self._reset()
 
-    def _build_net(self, n_fc, in_type, out_type):
+    def _build_net(self, in_type, out_type):
         if in_type == 'forward':
             ob = self.ob_fw
             done = self.done_fw
@@ -106,8 +105,9 @@ class LstmACPolicy(ACPolicy):
             states = self.states[0]
         else:
             states = self.states[1]
-        h, new_states = lstm(ob, done, states, out_type + '_lstm')
-        out_val = self._build_fc_net(h, n_fc, out_type)
+        h = fc(ob, out_type + '_fc', self.n_fc)
+        h, new_states = lstm(h, done, states, out_type + '_lstm')
+        out_val = self._build_out_net(h, out_type)
         return out_val, new_states
 
     def _reset(self):
@@ -157,11 +157,11 @@ class LstmACPolicy(ACPolicy):
 
 
 class HybridACPolicy(LstmACPolicy):
-    def __init__(self, n_s, n_a, n_f, n_step, n_fc0=128, n_fc=128, n_lstm=64, name=None):
+    def __init__(self, n_s, n_a, n_f, n_step, n_fc_ob=128, n_fc_fp=128, n_lstm=64, name=None):
         ACPolicy.__init__(self, n_a, n_s, n_step, 'hybrid', name)
         self.n_lstm = n_lstm
-        self.n_fc = n_fc
-        self.n_fc0 = n_fc0
+        self.n_fc_ob = n_fc_ob
+        self.n_fc_fp = n_fc_fp
         self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_f]) # forward 1-step
         self.done_fw = tf.placeholder(tf.float32, [1])
         self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_f]) # backward n-step
@@ -169,17 +169,17 @@ class HybridACPolicy(LstmACPolicy):
         self.states = tf.placeholder(tf.float32, [2, n_lstm * 2])
         with tf.variable_scope(self.name):
             # pi and v use separate nets
-            self.pi_fw, pi_state = self._build_net(n_fc, 'forward', 'pi')
-            self.v_fw, v_state = self._build_net(n_fc, 'forward', 'v')
+            self.pi_fw, pi_state = self._build_net('forward', 'pi')
+            self.v_fw, v_state = self._build_net('forward', 'v')
             pi_state = tf.expand_dims(pi_state, 0)
             v_state = tf.expand_dims(v_state, 0)
             self.new_states = tf.concat([pi_state, v_state], 0)
         with tf.variable_scope(self.name, reuse=True):
-            self.pi, _ = self._build_net(n_fc, 'backward', 'pi')
-            self.v, _ = self._build_net(n_fc, 'backward', 'v')
+            self.pi, _ = self._build_net('backward', 'pi')
+            self.v, _ = self._build_net('backward', 'v')
         self._reset()
 
-    def _build_net(self, n_fc, in_type, out_type):
+    def _build_net(self, in_type, out_type):
         if in_type == 'forward':
             ob = self.ob_fw
             done = self.done_fw
@@ -190,10 +190,11 @@ class HybridACPolicy(LstmACPolicy):
             states = self.states[0]
         else:
             states = self.states[1]
-        h0, new_states = lstm(ob[:, :self.n_s], done, states, out_type + '_lstm')
-        h1 = fc(ob[:, self.n_s:], out_type + '_fc0', self.n_fc0)
+        h0 = fc(ob[:, :self.n_s], out_type + '_fco', self.n_fc_ob)
+        h1 = fc(ob[:, self.n_s:], out_type + '_fcf', self.n_fc_fp)
         h = tf.concat([h0, h1], 1)
-        out_val = self._build_fc_net(h, n_fc, out_type)
+        h, new_states = lstm(h, done, states, out_type + '_lstm')
+        out_val = self._build_out_net(h, out_type)
         return out_val, new_states
 
 

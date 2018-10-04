@@ -38,14 +38,14 @@ class A2C:
         self.sess.run(tf.global_variables_initializer())
 
     def _init_policy(self, n_s, n_a, n_f, model_config, agent_name=None):
-        n_h = model_config.getint('num_h')
+        n_fc = model_config.getint('num_fc')
         n_lstm = model_config.getint('num_lstm')
         if self.name == 'ma2c':
-            n_fc = model_config.getint('num_fc')
-            policy = HybridACPolicy(n_s, n_a, n_f, self.n_step, n_fc0=n_fc,
-                                    n_lstm=n_lstm, n_fc=n_h, name=agent_name)
+            n_fp = model_config.getint('num_fp')
+            policy = HybridACPolicy(n_s, n_a, n_f, self.n_step, n_fc_ob=n_fc,
+                                    n_fc_fp=n_fp, n_lstm=n_lstm, name=agent_name)
         else:
-            policy = LstmACPolicy(n_s, n_a, self.n_step, n_fc=n_h, n_lstm=n_lstm, name=agent_name)
+            policy = LstmACPolicy(n_s, n_a, self.n_step, n_fc=n_fc, n_lstm=n_lstm, name=agent_name)
         return policy
 
     def _init_scheduler(self, model_config):

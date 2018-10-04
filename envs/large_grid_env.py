@@ -16,7 +16,7 @@ from large_grid.data.build_file import gen_rou_file
 sns.set_color_codes()
 
 
-STATE_NAMES = ['wave']
+STATE_NAMES = ['wave', 'wait']
 PHASE_NUM = 5
 # map from ild order (alphabeta) to signal order (clockwise from north)
 STATE_PHASE_MAP = {'nt1': [2, 3, 1, 0], 'nt2': [2, 3, 1, 0],
