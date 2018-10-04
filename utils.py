@@ -128,7 +128,7 @@ class Trainer():
 
     def _init_summary(self):
         self.train_reward = tf.placeholder(tf.float32, [])
-        self.train_summry = tf.summary.scalar('train_reward', self.train_reward)
+        self.train_summary = tf.summary.scalar('train_reward', self.train_reward)
         self.test_reward = tf.placeholder(tf.float32, [])
         self.test_summary = tf.summary.scalar('test_reward', self.test_reward)
 
