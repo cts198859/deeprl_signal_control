@@ -20,41 +20,32 @@ class PhaseSet:
         self.phases = {}
         self.num_phase = len(phases)
         self.num_lane = len(phases[0])
-        self.phases['green'] = phases
+        self.phases = phases
         self._init_phase_set()
 
     @staticmethod
-    def _get_phase_red_lanes(phase):
-        red_lanes = []
+    def _get_phase_lanes(phase, signal='r'):
+        phase_lanes = []
         for i, l in enumerate(phase):
-            if l == 'r':
-                red_lanes.append(i)
-        return red_lanes
-
-    @staticmethod
-    def _get_yellow_phase(phase):
-        yellow_phase = ''
-        for l in phase:
-            yl = 'y' if l in 'gG' else l
-            yellow_phase += yl
-        return yellow_phase
+            if l == signal:
+                phase_lanes.append(i)
+        return phase_lanes
 
     def _init_phase_set(self):
         self.red_lanes = []
-        yellow_phases = []
-        for phase in self.phases['green']:
-            self.red_lanes.append(self._get_phase_red_lanes(phase))
-            yellow_phases.append(self._get_yellow_phase(phase))
-        self.phases['yellow'] = yellow_phases
+        # self.green_lanes = []
+        for phase in self.phases:
+            self.red_lanes.append(self._get_phase_lanes(phase))
+            # self.green_lanes.append(self._get_phase_lanes(phase, signal='G'))
 
 
 class PhaseMap:
     def __init__(self):
         self.phases = {}
 
-    def get_phase(self, phase_id, phase_type, action):
+    def get_phase(self, phase_id, action):
         # phase_type is either green or yellow
-        return self.phases[phase_id].phases[phase_type][int(action)]
+        return self.phases[phase_id].phases[int(action)]
 
     def get_phase_num(self, phase_id):
         return self.phases[phase_id].num_phase
@@ -134,16 +125,29 @@ class TrafficSimulator:
 
     def _get_node_phase(self, action, node_name, phase_type):
         node = self.nodes[node_name]
-        phase_num = node.n_a
+        cur_phase = self.phase_map.get_phase(node.phase_id, action)
         if phase_type == 'green':
-            return self.phase_map.get_phase(phase_num, 'green', action)
+            return cur_phase
         prev_action = node.prev_action
         node.prev_action = action
-        if (prev_action >= 0) and (action != prev_action):
-            yellow_phase = self.phase_map.get_phase(phase_num, 'yellow', prev_action)
-            return yellow_phase
-        green_phase = self.phase_map.get_phase(phase_num, 'green', action)
-        return green_phase
+        if (prev_action < 0) or (action == prev_action):
+            return cur_phase
+        prev_phase = self.phase_map.get_phase(node.phase_id, prev_action)
+        switch_reds = []
+        switch_greens = []
+        for i, (p0, p1) in enumerate(zip(prev_phase, cur_phase)):
+            if (p0 in 'Gg') and (p1 == 'r'):
+                switch_reds.append(i)
+            elif (p0 in 'r') and (p1 in 'Gg'):
+                switch_greens.append(i)
+        if not len(switch_reds):
+            return cur_phase
+        yellow_phase = list(cur_phase)
+        for i in switch_reds:
+            yellow_phase[i] = 'y'
+        for i in switch_greens:
+            yellow_phase[i] = 'r'
+        return ''.join(yellow_phase)
 
     def _get_node_phase_id(self, node_name):
         # needs to be overwriteen
@@ -277,6 +281,9 @@ class TrafficSimulator:
         # needs to be overwriteen
         raise NotImplementedError()
 
+    def _init_sim_traffic(self):
+        return
+
     def _init_state_space(self):
         self._reset_state()
         self.n_s_ls = []
@@ -341,22 +348,26 @@ class TrafficSimulator:
         cars = self.sim.vehicle.getIDList()
         num_tot_car = len(cars)
         speeds = np.array([self.sim.vehicle.getSpeed(car) for car in cars])
-        # car is stopped if its speed < 0.5m/s
-        num_stop_car = np.sum(speeds < 0.5)
         num_in_car = self.sim.simulation.getDepartedNumber()
         num_out_car = self.sim.simulation.getArrivedNumber()
         avg_waiting_time = np.mean([self.sim.vehicle.getWaitingTime(car) for car in cars])
         avg_speed = np.mean(speeds)
         # all trip-related measurements are not supported by traci,
         # need to read from outputfile afterwards
+        queues = []
+        for node_name in self.node_names:
+            for ild in self.nodes[node_name].ilds_in:
+                lane_name = 'e:' + ild.split(':')[1]
+                queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
+        avg_queue = np.mean(np.array(queues))
         cur_traffic = {'episode': self.cur_episode,
                        'time_sec': self.cur_sec,
                        'number_total_car': num_tot_car,
                        'number_departed_car': num_in_car,
                        'number_arrived_car': num_out_car,
-                       'number_stopped_car': num_stop_car,
-                       'average_waiting_time': avg_waiting_time,
-                       'average_speed': avg_speed}
+                       'avg_wait_sec': avg_waiting_time,
+                       'avg_speed_mps': avg_speed,
+                       'avg_queue': avg_queue}
         self.traffic_data.append(cur_traffic)
 
     @staticmethod
@@ -389,8 +400,8 @@ class TrafficSimulator:
             # reward += self._measure_reward_step()
             self.cur_sec += 1
             if self.is_record:
-                self._debug_traffic_step()
-                # self._measure_traffic_step()
+                # self._debug_traffic_step()
+                self._measure_traffic_step()
         # return reward
 
     def _transfer_action(self, action):
@@ -464,20 +475,21 @@ class TrafficSimulator:
         trip_data = pd.DataFrame(self.trip_data)
         trip_data.to_csv(self.output_path + ('%s_%s_trip.csv' % (self.name, self.agent)))
 
-    def reset(self, test_ind=0):
+    def reset(self, gui=False, test_ind=0):
         # have to terminate previous sim before calling reset
         self._reset_state()
         if not self.train_mode:
             self.seed = self.test_seeds[test_ind]
         # self._init_sim(gui=True)
-        self._init_sim()
-        # next environment random condition should be different
-        self.seed += 10
+        self._init_sim(gui)
         self.cur_sec = 0
         self.cur_episode += 1
         # initialize fingerprint
         if self.agent == 'ma2c':
             self.update_fingerprint(self._init_policy())
+        self._init_sim_traffic()
+        # next environment random condition should be different
+        self.seed += 10
         return self._get_state()
 
     def terminate(self):
@@ -497,22 +509,16 @@ class TrafficSimulator:
         done = False
         if self.cur_sec >= self.episode_length_sec:
             done = True
-
+        global_reward = np.sum(reward) # for fair comparison
         if self.is_record:
-            if self.name == 'large_grid':
-                node_name = 'nt13'
-            node_ind = self.node_names.index(node_name)
-            action_r = int(action[node_ind])
-            reward_r = reward[node_ind]
-            state_r = ','.join(['%.2f' % s for s in state[node_ind]])
+            action_r = ','.join(['%d' % a for a in action])
             cur_control = {'episode': self.cur_episode,
                            'time_sec': self.cur_sec,
                            'step': self.cur_sec / self.control_interval_sec,
-                           'state': state_r,
                            'action': action_r,
-                           'reward': reward_r}
+                           'reward': global_reward}
             self.control_data.append(cur_control)
-        global_reward = np.sum(reward) # for fair comparison
+
         # use local rewards in test
         if not self.train_mode:
             return state, reward, done, global_reward
