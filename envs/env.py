@@ -68,10 +68,11 @@ class Node:
         self.fingerprint = [] # local policy
         self.name = name
         self.neighbor = neighbor
-        self.num_state = 0
+        self.num_state = 0 # wave and wait should have the same dim
         self.num_fingerprint = 0
-        self.state = [] # local state
-        self.waits = []
+        self.wave_state = [] # local state
+        self.wait_state = [] # local state
+        self.waits = [] 
         self.phase_id = -1
         self.n_a = 0
         self.prev_action = -1
@@ -156,30 +157,37 @@ class TrafficSimulator:
 
     def _get_node_state_num(self, node):
         assert len(node.lanes_in) == self.phase_map.get_lane_num(node.phase_id)
-        # wait + wave states for each lane
-        return len(self.state_names) * len(node.ilds_in)
+        # wait / wave states for each lane
+        return len(node.ilds_in)
 
     def _get_state(self):
+        # hard code the state ordering as wave, wait, fp
         state = []
         # measure the most recent state
         self._measure_state_step()
 
         # get the appropriate state vectors
-        for node in self.node_names:
-            if self.agent in ['greedy', 'a2c']:
-                state.append(self.nodes[node].state)
+        for node_name in self.node_names:
+            node = self.nodes[node_name]
+            # wave is required in state
+            if self.agent == 'greedy':
+                state.append(node.wave_state)
+            elif self.agent == 'a2c':
+                state.append(np.concatenate([node.wave_state, node.wait_state]))
             else:
-                cur_state = [self.nodes[node].state]
-                # include states of neighbors
-                for nnode_name in self.nodes[node].neighbor:
+                cur_state = [node.wave_state]
+                # include wave states of neighbors
+                for nnode_name in node.neighbor:
                     if self.agent != 'ma2c':
-                        cur_state.append(self.nodes[nnode_name].state)
+                        cur_state.append(self.nodes[nnode_name].wave_state)
                     else:
                         # discount the neigboring states
-                        cur_state.append(self.nodes[nnode_name].state * self.coop_gamma)
+                        cur_state.append(self.nodes[nnode_name].wave_state * self.coop_gamma)
+                # include wait state
+                cur_state.append(node.wait_state)
                 # include fingerprints of neighbors
                 if self.agent == 'ma2c':
-                    for nnode_name in self.nodes[node].neighbor:
+                    for nnode_name in node.neighbor:
                         cur_state.append(self.nodes[nnode_name].fingerprint)
                 state.append(np.concatenate(cur_state))
 
@@ -288,20 +296,23 @@ class TrafficSimulator:
     def _init_state_space(self):
         self._reset_state()
         self.n_s_ls = []
+        self.n_w_ls = []
         self.n_f_ls = []
         for node_name in self.node_names:
             node = self.nodes[node_name]
-            num_state = node.num_state
+            num_wave = node.num_state
             num_fingerprint = 0
             for nnode_name in node.neighbor:
                 if self.agent not in ['a2c', 'greedy']:
                     # all marl agents have neighborhood communication
-                    num_state += self.nodes[nnode_name].num_state
+                    num_wave += self.nodes[nnode_name].num_state
                 if self.agent == 'ma2c':
                     # only ma2c uses neighbor's policy
                     num_fingerprint += self.nodes[nnode_name].num_fingerprint
-            self.n_s_ls.append(num_state + num_fingerprint)
+            num_wait = 0 if 'wait' not in self.state_names else node.num_state
+            self.n_s_ls.append(num_wave + num_wait + num_fingerprint)
             self.n_f_ls.append(num_fingerprint)
+            self.n_w_ls.append(num_wait)
         self.n_s = np.sum(np.array(self.n_s_ls))
 
     def _measure_reward_step(self):
@@ -327,23 +338,25 @@ class TrafficSimulator:
 
     def _measure_state_step(self):
         for node_name in self.node_names:
-            state = []
+            node = self.nodes[node_name]
             for state_name in self.state_names:
                 if state_name == 'wave':
                     cur_state = []
-                    for ild in self.nodes[node_name].ilds_in:
+                    for ild in node.ilds_in:
                         cur_state.append(self.sim.lanearea.getLastStepVehicleNumber(ild))
                     cur_state = np.array(cur_state)
-                elif state_name == 'wait':
-                    cur_state = self.nodes[node_name].waits
+                else:
+                    cur_state = node.waits
                 if self.record_stats:
                     self.state_stat[state_name] += list(cur_state)
                 # normalization
                 norm_cur_state = self._norm_clip_state(cur_state,
                                                        self.norms[state_name],
                                                        self.clips[state_name])
-                state.append(norm_cur_state)
-            self.nodes[node_name].state = np.concatenate(state)
+                if state_name == 'wave':
+                    node.wave_state = norm_cur_state
+                else:
+                    node.wait_state = norm_cur_state
 
     def _measure_traffic_step(self):
         cars = self.sim.vehicle.getIDList()
@@ -384,8 +397,8 @@ class TrafficSimulator:
             # fingerprint is previous policy[:-1]
             node.num_fingerprint = node.n_a - 1
             node.num_state = self._get_node_state_num(node)
-            node.state = np.zeros(node.num_state)
-            node.waits = np.zeros(len(node.ilds_in))
+            node.waves = np.zeros(node.num_state)
+            node.waits = np.zeros(node.num_state)
 
     def _set_phase(self, action, phase_type, phase_duration):
         for node_name, a in zip(self.node_names, list(action)):
@@ -536,21 +549,24 @@ class TrafficSimulator:
             new_reward = []
             for node, r in zip(self.node_names, reward):
                 cur_reward = r
-                for i, nnode in enumerate(self.node_names):
-                    if nnode == node:
-                        continue
-                    if nnode in self.nodes[node].neighbor:
-                        cur_reward += self.coop_gamma * reward[i]
-                    elif self.name == 'small_grid':
-                        # in small grid, agent is at most 2 steps away
-                        cur_reward += (self.coop_gamma ** 2) * reward[i]
-                    else:
-                        # in large grid, a distance map is used
-                        if nnode in self.distance_map[node]:
-                            distance = self.distance_map[node][nnode]
-                            cur_reward += (self.coop_gamma ** distance) * reward[i]
-                        else:
-                            cur_reward += (self.coop_gamma ** self.max_distance) * reward[i]
+                for nnode_name in node.neighbor:
+                    i = self.node_names.index(nnode_name)
+                    cur_reward += self.coop_gamma * reward[i]
+                # for i, nnode in enumerate(self.node_names):
+                #     if nnode == node:
+                #         continue
+                #     if nnode in self.nodes[node].neighbor:
+                #         cur_reward += self.coop_gamma * reward[i]
+                #     elif self.name == 'small_grid':
+                #         # in small grid, agent is at most 2 steps away
+                #         cur_reward += (self.coop_gamma ** 2) * reward[i]
+                #     else:
+                #         # in large grid, a distance map is used
+                #         if nnode in self.distance_map[node]:
+                #             distance = self.distance_map[node][nnode]
+                #             cur_reward += (self.coop_gamma ** distance) * reward[i]
+                #         else:
+                #             cur_reward += (self.coop_gamma ** self.max_distance) * reward[i]
                 new_reward.append(cur_reward)
             reward = np.array(new_reward)
         return state, reward, done, global_reward

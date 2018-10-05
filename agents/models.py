@@ -37,15 +37,17 @@ class A2C:
             self._init_train(model_config)
         self.sess.run(tf.global_variables_initializer())
 
-    def _init_policy(self, n_s, n_a, n_f, model_config, agent_name=None):
-        n_fc = model_config.getint('num_fc')
+    def _init_policy(self, n_s, n_a, n_w, n_f, model_config, agent_name=None):
+        n_fw = model_config.getint('num_fw')
+        n_ft = model_config.getint('num_ft')
         n_lstm = model_config.getint('num_lstm')
         if self.name == 'ma2c':
             n_fp = model_config.getint('num_fp')
-            policy = HybridACPolicy(n_s, n_a, n_f, self.n_step, n_fc_ob=n_fc,
-                                    n_fc_fp=n_fp, n_lstm=n_lstm, name=agent_name)
+            policy = HybridACPolicy(n_s, n_a, n_w, n_f, self.n_step, n_fc_wave=n_fw,
+                                    n_fc_wait=n_ft, n_fc_fp=n_fp, n_lstm=n_lstm, name=agent_name)
         else:
-            policy = LstmACPolicy(n_s, n_a, self.n_step, n_fc=n_fc, n_lstm=n_lstm, name=agent_name)
+            policy = LstmACPolicy(n_s, n_a, n_w, self.n_step, n_fc_wave=n_fw,
+                                  n_fc_wait=n_ft, n_lstm=n_lstm, name=agent_name)
         return policy
 
     def _init_scheduler(self, model_config):
@@ -125,7 +127,7 @@ class A2C:
 
 
 class IA2C(A2C):
-    def __init__(self, n_s_ls, n_a_ls, total_step,
+    def __init__(self, n_s_ls, n_a_ls, n_w_ls, total_step,
                  model_config, seed=0):
         self.name = 'ia2c'
         self.agents = []
@@ -134,6 +136,7 @@ class IA2C(A2C):
         self.reward_norm = model_config.getfloat('reward_norm')
         self.n_s_ls = n_s_ls
         self.n_a_ls = n_a_ls
+        self.n_w_ls = n_w_ls
         self.n_step = model_config.getint('batch_size')
         # init tf
         tf.reset_default_graph()
@@ -141,9 +144,9 @@ class IA2C(A2C):
         config = tf.ConfigProto(allow_soft_placement=True)
         self.sess = tf.Session(config=config)
         self.policy_ls = []
-        for i, (n_s, n_a) in enumerate(zip(self.n_s_ls, self.n_a_ls)):
+        for i, (n_s, n_w, n_a) in enumerate(zip(self.n_s_ls, self.n_w_ls, self.n_a_ls)):
             # agent_name is needed to differentiate multi-agents
-            self.policy_ls.append(self._init_policy(n_s, n_a, 0, model_config, agent_name=str(i)))
+            self.policy_ls.append(self._init_policy(n_s - n_w, n_a, n_w, 0, model_config, agent_name=str(i)))
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
@@ -221,7 +224,7 @@ class IA2C(A2C):
 
 
 class MA2C(IA2C):
-    def __init__(self, n_s_ls, n_a_ls, n_f_ls, total_step,
+    def __init__(self, n_s_ls, n_a_ls, n_w_ls, n_f_ls, total_step,
                  model_config, seed=0):
         self.name = 'ma2c'
         self.agents = []
@@ -231,6 +234,7 @@ class MA2C(IA2C):
         self.n_s_ls = n_s_ls
         self.n_a_ls = n_a_ls
         self.n_f_ls = n_f_ls
+        self.n_w_ls = n_w_ls
         self.n_step = model_config.getint('batch_size')
         # init tf
         tf.reset_default_graph()
@@ -238,9 +242,9 @@ class MA2C(IA2C):
         config = tf.ConfigProto(allow_soft_placement=True)
         self.sess = tf.Session(config=config)
         self.policy_ls = []
-        for i, (n_s, n_a, n_f) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_f_ls)):
+        for i, (n_s, n_a, n_w, n_f) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_w_ls, self.n_f_ls)):
             # agent_name is needed to differentiate multi-agents
-            self.policy_ls.append(self._init_policy(n_s - n_f, n_a, n_f, model_config, agent_name=str(i)))
+            self.policy_ls.append(self._init_policy(n_s - n_f - n_w, n_a, n_w, n_f, model_config, agent_name=str(i)))
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training

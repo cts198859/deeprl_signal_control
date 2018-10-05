@@ -73,13 +73,14 @@ class ACPolicy:
 
 
 class LstmACPolicy(ACPolicy):
-    def __init__(self, n_s, n_a, n_step, n_fc=128, n_lstm=64, name=None):
+    def __init__(self, n_s, n_a, n_w, n_step, n_fc_wave=128, n_fc_wait=32, n_lstm=64, name=None):
         super().__init__(n_a, n_s, n_step, 'lstm', name)
         self.n_lstm = n_lstm
-        self.n_fc = n_fc
-        self.ob_fw = tf.placeholder(tf.float32, [1, n_s]) # forward 1-step
+        self.n_fc_wait = n_fc_wait
+        self.n_fc_wave = n_fc_wave
+        self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_w]) # forward 1-step
         self.done_fw = tf.placeholder(tf.float32, [1])
-        self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s]) # backward n-step
+        self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_w]) # backward n-step
         self.done_bw = tf.placeholder(tf.float32, [n_step])
         self.states = tf.placeholder(tf.float32, [2, n_lstm * 2])
         with tf.variable_scope(self.name):
@@ -105,7 +106,9 @@ class LstmACPolicy(ACPolicy):
             states = self.states[0]
         else:
             states = self.states[1]
-        h = fc(ob, out_type + '_fc', self.n_fc)
+        h0 = fc(ob[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
+        h1 = fc(ob[:, self.n_s:], out_type + '_fct', self.n_fc_wait)
+        h = tf.concat([h0, h1], 1)
         h, new_states = lstm(h, done, states, out_type + '_lstm')
         out_val = self._build_out_net(h, out_type)
         return out_val, new_states
@@ -157,14 +160,16 @@ class LstmACPolicy(ACPolicy):
 
 
 class HybridACPolicy(LstmACPolicy):
-    def __init__(self, n_s, n_a, n_f, n_step, n_fc_ob=128, n_fc_fp=128, n_lstm=64, name=None):
+    def __init__(self, n_s, n_a, n_w, n_f, n_step, n_fc_wave=128, n_fc_wait=32, n_fc_fp=32, n_lstm=64, name=None):
         ACPolicy.__init__(self, n_a, n_s, n_step, 'hybrid', name)
         self.n_lstm = n_lstm
-        self.n_fc_ob = n_fc_ob
+        self.n_fc_wave = n_fc_wave
+        self.n_fc_wait = n_fc_wait
         self.n_fc_fp = n_fc_fp
-        self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_f]) # forward 1-step
+        self.n_w = n_w
+        self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_w + n_f]) # forward 1-step
         self.done_fw = tf.placeholder(tf.float32, [1])
-        self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_f]) # backward n-step
+        self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_w + n_f]) # backward n-step
         self.done_bw = tf.placeholder(tf.float32, [n_step])
         self.states = tf.placeholder(tf.float32, [2, n_lstm * 2])
         with tf.variable_scope(self.name):
@@ -190,9 +195,10 @@ class HybridACPolicy(LstmACPolicy):
             states = self.states[0]
         else:
             states = self.states[1]
-        h0 = fc(ob[:, :self.n_s], out_type + '_fco', self.n_fc_ob)
-        h1 = fc(ob[:, self.n_s:], out_type + '_fcf', self.n_fc_fp)
-        h = tf.concat([h0, h1], 1)
+        h0 = fc(ob[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
+        h1 = fc(ob[:, self.n_s: (self.n_s + self.n_w)], out_type + '_fct', self.n_fc_wait)
+        h2 = fc(ob[:, (self.n_s + self.n_w):], out_type + '_fcf', self.n_fc_fp)
+        h = tf.concat([h0, h1, h2], 1)
         h, new_states = lstm(h, done, states, out_type + '_lstm')
         out_val = self._build_out_net(h, out_type)
         return out_val, new_states

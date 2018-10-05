@@ -90,14 +90,14 @@ def train(args):
     seed = config.getint('ENV_CONFIG', 'seed')
     # coord = tf.train.Coordinator()
 
-    if env.agent == 'a2c':
-        model = A2C(env.n_s, env.n_a, total_step,
-                    config['MODEL_CONFIG'], seed=seed)
-    elif env.agent == 'ia2c':
-        model = IA2C(env.n_s_ls, env.n_a_ls, total_step,
+    # if env.agent == 'a2c':
+    #     model = A2C(env.n_s, env.n_a, total_step,
+    #                 config['MODEL_CONFIG'], seed=seed)
+    if env.agent == 'ia2c':
+        model = IA2C(env.n_s_ls, env.n_a_ls, env.n_w_ls, total_step,
                      config['MODEL_CONFIG'], seed=seed)
     elif env.agent == 'ma2c':
-        model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, total_step,
+        model = MA2C(env.n_s_ls, env.n_a_ls, env.n_w_ls, env.n_f_ls, total_step,
                      config['MODEL_CONFIG'], seed=seed)
 
     # disable multi-threading for safe SUMO implementation
