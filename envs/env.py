@@ -547,9 +547,9 @@ class TrafficSimulator:
         else:
             # discounted global reward
             new_reward = []
-            for node, r in zip(self.node_names, reward):
+            for node_name, r in zip(self.node_names, reward):
                 cur_reward = r
-                for nnode_name in node.neighbor:
+                for nnode_name in self.nodes[node_name].neighbor:
                     i = self.node_names.index(nnode_name)
                     cur_reward += self.coop_gamma * reward[i]
                 # for i, nnode in enumerate(self.node_names):

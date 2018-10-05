@@ -43,7 +43,7 @@ class A2C:
         n_lstm = model_config.getint('num_lstm')
         if self.name == 'ma2c':
             n_fp = model_config.getint('num_fp')
-            policy = HybridACPolicy(n_s, n_a, n_w, n_f, self.n_step, n_fc_wave=n_fw,
+            policy = FPLstmACPolicy(n_s, n_a, n_w, n_f, self.n_step, n_fc_wave=n_fw,
                                     n_fc_wait=n_ft, n_fc_fp=n_fp, n_lstm=n_lstm, name=agent_name)
         else:
             policy = LstmACPolicy(n_s, n_a, n_w, self.n_step, n_fc_wave=n_fw,

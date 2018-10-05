@@ -159,9 +159,9 @@ class LstmACPolicy(ACPolicy):
         return outs
 
 
-class HybridACPolicy(LstmACPolicy):
+class FPLstmACPolicy(LstmACPolicy):
     def __init__(self, n_s, n_a, n_w, n_f, n_step, n_fc_wave=128, n_fc_wait=32, n_fc_fp=32, n_lstm=64, name=None):
-        ACPolicy.__init__(self, n_a, n_s, n_step, 'hybrid', name)
+        ACPolicy.__init__(self, n_a, n_s, n_step, 'fplstm', name)
         self.n_lstm = n_lstm
         self.n_fc_wave = n_fc_wave
         self.n_fc_wait = n_fc_wait
@@ -202,6 +202,70 @@ class HybridACPolicy(LstmACPolicy):
         h, new_states = lstm(h, done, states, out_type + '_lstm')
         out_val = self._build_out_net(h, out_type)
         return out_val, new_states
+
+
+class FcACPolicy(ACPolicy):
+    def __init__(self, n_s, n_a, n_w, n_step, n_fc_wave=128, n_fc_wait=32, n_lstm=64, name=None):
+        super().__init__(n_a, n_s, n_step, 'fc', name)
+        self.n_fc_wave = n_fc_wave
+        self.n_fc_wait = n_fc_wait
+        self.n_fc = n_lstm
+        self.obs = tf.placeholder(tf.float32, [None, n_s + n_w])
+        with tf.variable_scope(self.name):
+            # pi and v use separate nets
+            self.pi = self._build_net('pi')
+            self.v = self._build_net('v')
+
+    def _build_net(self, out_type):
+        h0 = fc(self.obs[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
+        h1 = fc(self.obs[:, self.n_s:], out_type + '_fct', self.n_fc_wait)
+        h = tf.concat([h0, h1], 1)
+        h = fc(h, out_type + '_fc', self.n_fc)
+        return self._build_out_net(h, out_type)
+
+    def forward(self, sess, ob, done, out_type='pv'):
+        outs = self._get_forward_outs(out_type)
+        out_values = sess.run(outs, {self.obs: np.array([ob])})
+        return self._return_forward_outs(out_values)
+
+    def backward(self, sess, obs, acts, dones, Rs, Advs, cur_lr, cur_beta,
+                 summary_writer=None, global_step=None):
+        if summary_writer is None:
+            ops = self._train
+        else:
+            ops = [self.summary, self._train]
+        outs = sess.run(ops,
+                        {self.obs: obs,
+                         self.A: acts,
+                         self.ADV: Advs,
+                         self.R: Rs,
+                         self.lr: cur_lr,
+                         self.entropy_coef: cur_beta})
+        if summary_writer is not None:
+            summary_writer.add_summary(outs[0], global_step=global_step)
+
+
+class FPFcACPolicy(ACPolicy):
+    def __init__(self, n_s, n_a, n_w, n_f, n_step, n_fc_wave=128, n_fc_wait=32, n_fc_fp=32, n_lstm=64, name=None):
+        super().__init__(n_a, n_s, n_step, 'fpfc', name)
+        self.n_fc_wave = n_fc_wave
+        self.n_fc_wait = n_fc_wait
+        self.n_fc_fp = n_fc_fp
+        self.n_fc = n_lstm
+        self.n_w = n_w
+        self.obs = tf.placeholder(tf.float32, [None, n_s + n_w + n_f])
+        with tf.variable_scope(self.name):
+            # pi and v use separate nets
+            self.pi = self._build_net('pi')
+            self.v = self._build_net('v')
+
+    def _build_net(self, out_type):
+        h0 = fc(self.obs[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
+        h1 = fc(self.obs[:, self.n_s:(self.n_s + self.n_w)], out_type + '_fct', self.n_fc_wait)
+        h2 = fc(self.obs[:, (self.n_s + self.n_w):], out_type + '_fcf', self.n_fc_fp)
+        h = tf.concat([h0, h1, h2], 1)
+        h = fc(h, out_type + '_fc', self.n_fc)
+        return self._build_out_net(h, out_type)
 
 
 class QPolicy:
