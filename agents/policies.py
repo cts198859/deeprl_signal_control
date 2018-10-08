@@ -295,7 +295,7 @@ class QPolicy:
         A_sparse = tf.one_hot(self.A, self.n_a)
 
         # backward
-        with tf.variable_scope(self.name + '_q', resue=True):
+        with tf.variable_scope(self.name + '_q', reuse=True):
             q0s = self._build_fc_net(self.S, self.n_fc)
             q0 = tf.reduce_sum(q0s * A_sparse, axis=1)
         with tf.variable_scope(self.name + '_tq'):

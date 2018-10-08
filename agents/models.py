@@ -286,9 +286,9 @@ class IQL:
         if self.model_type == 'dqn':
             n_h = model_config.getint('num_h')
             n_fc = model_config.getint('num_fc')
-            policy = DeepQPolicy(n_s, n_a, n_step, n_fc0=n_fc, n_fc=n_h, name=agent_name)
+            policy = DeepQPolicy(n_s, n_a, self.n_step, n_fc0=n_fc, n_fc=n_h, name=agent_name)
         else:
-            policy = LRQPolicy(n_s, n_a, n_step, name=agent_name)
+            policy = LRQPolicy(n_s, n_a, self.n_step, name=agent_name)
         return policy
 
     def _init_scheduler(self, model_config):
@@ -330,13 +330,13 @@ class IQL:
             else:
                 self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
 
-    def forward(self, ob, mode='act'):
+    def forward(self, obs, mode='act'):
         eps = self.eps_scheduler.get(1)
         action = []
         for i in range(self.n_agent):
             if (mode == 'explore') and (np.random.random() < eps):
                 action.append(np.random.randint(self.n_a_ls[i]))
             else:
-                qs = self.policy_ls[i].forward(self.sess, ob)
+                qs = self.policy_ls[i].forward(self.sess, obs[i])
                 action.append(np.argmax(qs))
         return action

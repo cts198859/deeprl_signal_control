@@ -76,16 +76,16 @@ class Counter:
         self.test_step = test_step
         self.log_step = log_step
         self.stop = False
-        self.init_test = True
+        # self.init_test = True
 
     def next(self):
         self.cur_step = next(self.counter)
         return self.cur_step
 
     def should_test(self):
-        if self.init_test:
-            self.init_test = False
-            return True
+        # if self.init_test:
+        #     self.init_test = False
+        #     return True
         test = False
         if (self.cur_step - self.cur_test_step) >= self.test_step:
             test = True

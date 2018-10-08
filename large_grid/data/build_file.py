@@ -283,20 +283,20 @@ def output_flows(peak_flow1, peak_flow2, density, seed=None):
 
     # create external origins and destinations for flows
     srcs = []
-    srcs.append(get_external_od([11, 12, 13, 14, 15], dest=False))
-    srcs.append(get_external_od([16, 17, 18, 19, 20], dest=False))
-    srcs.append(get_external_od([1, 2, 3, 4, 5], dest=False))
-    srcs.append(get_external_od([6, 7, 8, 9, 10], dest=False))
+    srcs.append(get_external_od([12, 13, 14], dest=False))
+    srcs.append(get_external_od([16, 18, 20], dest=False))
+    srcs.append(get_external_od([2, 3, 4], dest=False))
+    srcs.append(get_external_od([6, 8, 10], dest=False))
 
     sinks = []
-    sinks.append(get_external_od([1, 2, 3, 4, 5]))
-    sinks.append(get_external_od([6, 7, 8, 9, 10]))
-    sinks.append(get_external_od([15, 14, 13, 12, 11]))
-    sinks.append(get_external_od([20, 19, 18, 17, 16]))
+    sinks.append(get_external_od([2, 3, 4]))
+    sinks.append(get_external_od([6, 8, 10]))
+    sinks.append(get_external_od([14, 13, 12]))
+    sinks.append(get_external_od([20, 18, 16]))
 
     # create volumes per 5 min for flows
-    ratios1 = np.array([0.4, 0.6, 0.9, 1.0, 0.75, 0.5, 0.25]) # start from 0
-    ratios2 = np.array([0.2, 0.5, 0.8, 1.0, 0.8, 0.6, 0.2])   # start from 15min
+    ratios1 = np.array([0.4, 0.7, 0.9, 1.0, 0.75, 0.5, 0.25]) # start from 0
+    ratios2 = np.array([0.3, 0.8, 0.9, 1.0, 0.8, 0.6, 0.2])   # start from 15min
     flows1 = peak_flow1 * 0.6 * ratios1
     flows2 = peak_flow1 * ratios1
     flows3 = peak_flow2 * 0.6 * ratios2

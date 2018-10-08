@@ -282,10 +282,7 @@ class TrafficSimulator:
         command += ['--seed', str(seed)]
         command += ['--remote-port', str(self.port)]
         command += ['--no-step-log', 'True']
-        if self.name != 'large_grid':
-            command += ['--time-to-teleport', '-1'] # disable teleport
-        else:
-            command += ['--time-to-teleport', '180']
+        command += ['--time-to-teleport', '600'] # long teleport for safety
         command += ['--no-warnings', 'True']
         command += ['--duration-log.disable', 'True']
         # collect trip info if necessary
@@ -395,11 +392,14 @@ class TrafficSimulator:
     def _measure_traffic_step(self):
         cars = self.sim.vehicle.getIDList()
         num_tot_car = len(cars)
-        speeds = np.array([self.sim.vehicle.getSpeed(car) for car in cars])
         num_in_car = self.sim.simulation.getDepartedNumber()
         num_out_car = self.sim.simulation.getArrivedNumber()
-        avg_waiting_time = np.mean([self.sim.vehicle.getWaitingTime(car) for car in cars])
-        avg_speed = np.mean(speeds)
+        if num_tot_car > 0:
+            avg_waiting_time = np.mean([self.sim.vehicle.getWaitingTime(car) for car in cars])
+            avg_speed = np.mean([self.sim.vehicle.getSpeed(car) for car in cars])
+        else:
+            avg_speed = 0
+            avg_waiting_time = 0
         # all trip-related measurements are not supported by traci,
         # need to read from outputfile afterwards
         queues = []
