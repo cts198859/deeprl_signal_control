@@ -340,3 +340,14 @@ class IQL:
                 qs = self.policy_ls[i].forward(self.sess, obs[i])
                 action.append(np.argmax(qs))
         return action
+
+    def add_transition(self, obs, actions, rewards, next_obs, done):
+        if (self.reward_norm):
+            for i in range(len(rewards)):
+                if rewards[i] < 0:
+                    rewards[i] = rewards[i] / self.reward_norm
+        if self.reward_clip:
+            rewards = np.clip(rewards, -self.reward_clip, self.reward_clip)
+        for i in range(self.n_agent):
+            self.trans_buffer_ls[i].add_transition(obs[i], actions[i],
+                                                   rewards[i], next_obs[i], done)
