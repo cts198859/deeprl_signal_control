@@ -139,9 +139,10 @@ class Trainer():
             summ = self.sess.run(self.test_summary, {self.test_reward: reward})
         self.summary_writer.add_summary(summ, global_step=global_step)
 
-    def explore(self, prev_ob, prev_done, cum_reward):
+    def explore(self, prev_ob, prev_done):
         ob = prev_ob
         done = prev_done
+        rewards = []
         for _ in range(self.n_step):
             if self.agent.endswith('a2c'):
                 policy, value = self.model.forward(ob, done)
@@ -158,9 +159,9 @@ class Trainer():
                 action = self.model.forward(ob, mode='explore')
                 policy = []
             next_ob, reward, done, global_reward = self.env.step(action)
-            cum_reward += global_reward
+            rewards.append(global_reward)
             global_step = self.global_counter.next()
-            self.cur_step += 1
+            # self.cur_step += 1
             if self.agent.endswith('a2c'):
                 self.model.add_transition(ob, action, reward, value, done)
             else:
@@ -188,7 +189,7 @@ class Trainer():
                 R = self.model.forward(ob, False, 'v')
         else:
             R = 0
-        return ob, done, R, cum_reward
+        return ob, done, R, rewards
 
     def perform(self, test_ind):
         ob = self.env.reset(test_ind=test_ind)
@@ -211,8 +212,9 @@ class Trainer():
             if done:
                 break
             ob = next_ob
-        total_reward = np.mean(np.array(rewards))
-        return total_reward
+        mean_reward = np.mean(np.array(rewards))
+        std_reward = np.std(np.array(rewards))
+        return mean_reward, std_reward
 
     def run_thread(self, coord):
         '''Multi-threading is disabled'''
@@ -241,13 +243,14 @@ class Trainer():
                 global_step = self.global_counter.cur_step
                 self.env.train_mode = False
                 for test_ind in range(self.test_num):
-                    cur_reward = self.perform(test_ind)
+                    mean_reward, std_reward = self.perform(test_ind)
                     self.env.terminate()
-                    rewards.append(cur_reward)
+                    rewards.append(mean_reward)
                     log = {'agent': self.agent,
                            'step': global_step,
                            'test_id': test_ind,
-                           'reward': cur_reward}
+                           'avg_reward': mean_reward,
+                           'std_reward': std_reward}
                     self.data.append(log)
                 avg_reward = np.mean(np.array(rewards))
                 self._add_summary(avg_reward, global_step, is_train=False)
@@ -257,10 +260,10 @@ class Trainer():
             self.env.train_mode = True
             ob = self.env.reset()
             done = False
-            cum_reward = 0
-            self.cur_step = 0
+            rewards = []
             while True:
-                ob, done, R, cum_reward = self.explore(ob, done, cum_reward)
+                ob, done, R, cur_rewards = self.explore(ob, done)
+                rewards += cur_rewards
                 global_step = self.global_counter.cur_step
                 if self.agent.endswith('a2c'):
                     self.model.backward(R, self.summary_writer, global_step)
@@ -269,8 +272,16 @@ class Trainer():
                 # termination
                 if done:
                     self.env.terminate()
-                    self._add_summary(cum_reward / float(self.cur_step), global_step)
                     break
+            rewards = np.array(rewards)
+            mean_reward = np.mean(rewards)
+            std_reward = np.std(rewards)
+            log = {'agent': self.agent,
+                   'step': global_step,
+                   'test_id': -1,
+                   'avg_reward': mean_reward,
+                   'std_reward': std_reward}
+            self._add_summary(mean_reward, global_step)
             self.summary_writer.flush()
         if self.run_test:
             df = pd.DataFrame(self.data)
@@ -345,9 +356,11 @@ class Evaluator(Tester):
         record_stats = False
         self.env.cur_episode = 0
         self.env.init_data(is_record, record_stats, self.output_path)
+        time.sleep(1)
         for test_ind in range(self.test_num):
-            self.perform(test_ind)
+            reward, _ = self.perform(test_ind)
             self.env.terminate()
+            logging.info('test %i, avg reward %.2f' % (test_ind, reward))
             time.sleep(2)
             self.env.collect_tripinfo()
         self.env.output_data()

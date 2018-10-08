@@ -278,7 +278,8 @@ def output_flows(peak_flow1, peak_flow2, density, seed=None):
     str_flows = '<routes>\n'
     str_flows += '  <vType id="type1" length="5" accel="5" decel="10"/>\n'
     # initial traffic dist
-    str_flows += init_routes(density)
+    if density > 0:
+        str_flows += init_routes(density)
 
     # create external origins and destinations for flows
     srcs = []
@@ -294,14 +295,14 @@ def output_flows(peak_flow1, peak_flow2, density, seed=None):
     sinks.append(get_external_od([20, 19, 18, 17, 16]))
 
     # create volumes per 5 min for flows
-    ratios1 = np.array([0.4, 0.5, 0.7, 0.8, 1.0, 0.75, 0.5, 0.25, 0.1]) # start from 0
-    ratios2 = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 0.8, 0.7, 0.5, 0.3])   # start from 15min
+    ratios1 = np.array([0.4, 0.6, 0.9, 1.0, 0.75, 0.5, 0.25]) # start from 0
+    ratios2 = np.array([0.2, 0.5, 0.8, 1.0, 0.8, 0.6, 0.2])   # start from 15min
     flows1 = peak_flow1 * 0.6 * ratios1
     flows2 = peak_flow1 * ratios1
     flows3 = peak_flow2 * 0.6 * ratios2
     flows4 = peak_flow2 * ratios2
     flows = [flows1, flows2, flows3, flows4]
-    times = np.arange(0, 3601, 300)
+    times = np.arange(0, 3001, 300)
     id1 = len(flows1)
     id2 = len(times) - 1 - id1
     for i in range(len(times) - 1):

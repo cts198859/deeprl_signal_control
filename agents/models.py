@@ -322,13 +322,13 @@ class IQL:
     def backward(self, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)
         for i in range(self.n_agent):
-            for k in range(self.n_step):
-                obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
-                if i == 0:
-                    self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
-                                               summary_writer=summary_writer, global_step=global_step + k)
-                else:
-                    self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
+            # for k in range(self.n_step):
+            obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
+            if i == 0:
+                self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
+                                           summary_writer=summary_writer, global_step=global_step)
+            else:
+                self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
 
     def forward(self, ob, mode='act'):
         eps = self.eps_scheduler.get(1)

@@ -8,7 +8,7 @@ import configparser
 import logging
 import tensorflow as tf
 import threading
-from envs.small_grid_env import SmallGridEnv, SmallGridController
+# from envs.small_grid_env import SmallGridEnv, SmallGridController
 from envs.large_grid_env import LargeGridEnv, LargeGridController
 from agents.models import A2C, IA2C, MA2C, IQL
 from utils import (Counter, Trainer, Tester, Evaluator,
@@ -99,6 +99,12 @@ def train(args):
     elif env.agent == 'ma2c':
         model = MA2C(env.n_s_ls, env.n_a_ls, env.n_w_ls, env.n_f_ls, total_step,
                      config['MODEL_CONFIG'], seed=seed)
+    elif env.agent == 'iqld':
+        model = IQL(env.n_s_ls, env.n_a_ls, total_step, config['MODEL_CONFIG'],
+                    seed=0, model_type='dqn')
+    else:
+        model = IQL(env.n_s_ls, env.n_a_ls, total_step, config['MODEL_CONFIG'],
+                    seed=0, model_type='lr')
 
     # disable multi-threading for safe SUMO implementation
     # threads = []
@@ -159,9 +165,15 @@ def evaluate_fn(agent_dir, output_dir, seeds, port):
         if agent == 'a2c':
             model = A2C(env.n_s, env.n_a, 0, config['MODEL_CONFIG'])
         elif agent == 'ia2c':
-            model = IA2C(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'])
+            model = IA2C(env.n_s_ls, env.n_a_ls, env.n_w_ls, 0, config['MODEL_CONFIG'])
         elif agent == 'ma2c':
-            model = MA2C(env.n_s_ls, env.n_a_ls, env.n_f_ls, 0, config['MODEL_CONFIG'])
+            model = MA2C(env.n_s_ls, env.n_a_ls, env.n_w_ls, env.n_f_ls, 0, config['MODEL_CONFIG'])
+        elif agent == 'iqld':
+            model = IQL(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'],
+                        seed=0, model_type='dqn')
+        else:
+            model = IQL(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'],
+                        seed=0, model_type='lr')
         if not model.load(agent_dir + '/'):
             return
     else:

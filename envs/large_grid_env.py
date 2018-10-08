@@ -19,27 +19,27 @@ sns.set_color_codes()
 STATE_NAMES = ['wave', 'wait']
 PHASE_NUM = 5
 # map from ild order (alphabeta) to signal order (clockwise from north)
-STATE_PHASE_MAP = {'nt1': [2, 3, 1, 0], 'nt2': [2, 3, 1, 0],
-                   'nt3': [2, 3, 1, 0], 'nt4': [2, 3, 1, 0],
-                   'nt5': [2, 1, 0, 3], 'nt6': [3, 2, 0, 1],
-                   'nt7': [0, 2, 3, 1], 'nt8': [0, 2, 3, 1],
-                   'nt9': [1, 0, 2, 3], 'nt10': [1, 0, 2, 3],
-                   'nt11': [3, 1, 0, 2], 'nt12': [3, 1, 0, 2],
-                   'nt13': [3, 1, 0, 2], 'nt14': [3, 1, 0, 2],
-                   'nt15': [1, 2, 3, 0], 'nt16': [3, 2, 1, 0],
-                   'nt17': [2, 3, 1, 0], 'nt18': [2, 3, 1, 0],
-                   'nt19': [2, 3, 1, 0], 'nt20': [1, 2, 3, 0],
-                   'nt21': [0, 3, 2, 1], 'nt22': [0, 2, 3, 1],
-                   'nt23': [0, 2, 3, 1], 'nt24': [0, 2, 3, 1],
-                   'nt25': [1, 0, 2, 3]}
-MAX_CAR_NUM = 30
+# STATE_PHASE_MAP = {'nt1': [2, 3, 1, 0], 'nt2': [2, 3, 1, 0],
+#                    'nt3': [2, 3, 1, 0], 'nt4': [2, 3, 1, 0],
+#                    'nt5': [2, 1, 0, 3], 'nt6': [3, 2, 0, 1],
+#                    'nt7': [0, 2, 3, 1], 'nt8': [0, 2, 3, 1],
+#                    'nt9': [1, 0, 2, 3], 'nt10': [1, 0, 2, 3],
+#                    'nt11': [3, 1, 0, 2], 'nt12': [3, 1, 0, 2],
+#                    'nt13': [3, 1, 0, 2], 'nt14': [3, 1, 0, 2],
+#                    'nt15': [1, 2, 3, 0], 'nt16': [3, 2, 1, 0],
+#                    'nt17': [2, 3, 1, 0], 'nt18': [2, 3, 1, 0],
+#                    'nt19': [2, 3, 1, 0], 'nt20': [1, 2, 3, 0],
+#                    'nt21': [0, 3, 2, 1], 'nt22': [0, 2, 3, 1],
+#                    'nt23': [0, 2, 3, 1], 'nt24': [0, 2, 3, 1],
+#                    'nt25': [1, 0, 2, 3]}
+# MAX_CAR_NUM = 30
 
 
 class LargeGridPhase(PhaseMap):
     def __init__(self):
         phases = ['GGgrrrGGgrrr', 'rrrGrGrrrGrG', 'rrrGGrrrrGGr',
                   'rrrGGGrrrrrr', 'rrrrrrrrrGGG']
-        self.phases = {5: PhaseSet(phases)}
+        self.phases = {PHASE_NUM: PhaseSet(phases)}
 
 
 class LargeGridController:

@@ -21,7 +21,7 @@ class PhaseSet:
         self.num_phase = len(phases)
         self.num_lane = len(phases[0])
         self.phases = phases
-        self._init_phase_set()
+        # self._init_phase_set()
 
     @staticmethod
     def _get_phase_lanes(phase, signal='r'):
@@ -62,7 +62,7 @@ class PhaseMap:
 class Node:
     def __init__(self, name, neighbor=[], control=False):
         self.control = control # disabled
-        self.edges_in = []  # for reward
+        # self.edges_in = []  # for reward
         self.lanes_in = []
         self.ilds_in = [] # for state
         self.fingerprint = [] # local policy
@@ -72,7 +72,7 @@ class Node:
         self.num_fingerprint = 0
         self.wave_state = [] # local state
         self.wait_state = [] # local state
-        self.waits = [] 
+        # self.waits = [] 
         self.phase_id = -1
         self.n_a = 0
         self.prev_action = -1
@@ -122,7 +122,7 @@ class TrafficSimulator:
                 lane_name = 'e:' + ild.split(':')[1]
                 cur_traffic[cur_name + 'queue'] = self.sim.lane.getLastStepHaltingNumber(lane_name)
                 cur_traffic[cur_name + 'flow'] = self.sim.lane.getLastStepVehicleNumber(lane_name)
-                cur_traffic[cur_name + 'wait'] = node.waits[i]
+                # cur_traffic[cur_name + 'wait'] = node.waits[i]
             self.traffic_data.append(cur_traffic)
 
     def _get_node_phase(self, action, node_name, phase_type):
@@ -156,7 +156,7 @@ class TrafficSimulator:
         raise NotImplementedError()
 
     def _get_node_state_num(self, node):
-        assert len(node.lanes_in) == self.phase_map.get_lane_num(node.phase_id)
+        # assert len(node.lanes_in) == self.phase_map.get_lane_num(node.phase_id)
         # wait / wave states for each lane
         return len(node.ilds_in)
 
@@ -203,24 +203,34 @@ class TrafficSimulator:
     def _init_nodes(self):
         nodes = {}
         for node_name in self.sim.trafficlight.getIDList():
+            if node_name in self.neighbor_map:
+                neighbor = self.neighbor_map[node_name]
+            else:
+                neighbor = []
             nodes[node_name] = Node(node_name,
-                                    neighbor=self.neighbor_map[node_name],
+                                    neighbor=neighbor,
                                     control=True)
             # controlled lanes: l:j,i_k
             lanes_in = self.sim.trafficlight.getControlledLanes(node_name)
             nodes[node_name].lanes_in = lanes_in
             # controlled edges: e:j,i
             # lane ilds: ild:j,i_k for road ji, lane k.
-            edges_in = []
+            # edges_in = []
             ilds_in = []
             for lane_name in lanes_in:
-                edge_name = 'e:' + lane_name.split(':')[-1].split('_')[0]
-                if edge_name not in edges_in:
-                    edges_in.append(edge_name)
-                ild_name = 'ild:' + lane_name.split(':')[-1]
+                # edge_name = 'e:' + lane_name.split(':')[-1].split('_')[0]
+                # if edge_name not in edges_in:
+                #     edges_in.append(edge_name)
+                if self.name == 'real_net':
+                    allow_type = self.sim.lane.getAllowed(lane_name)
+                    if 'passenger' not in allow_type:
+                        continue
+                    ild_name = 'ild:' + lane_name
+                else:
+                    ild_name = 'ild:' + lane_name.split(':')[-1]
                 if ild_name not in ilds_in:
                     ilds_in.append(ild_name)
-            nodes[node_name].edges_in = edges_in
+            # nodes[node_name].edges_in = edges_in
             nodes[node_name].ilds_in = ilds_in
         self.nodes = nodes
         self.node_names = sorted(list(nodes.keys()))
@@ -228,8 +238,9 @@ class TrafficSimulator:
         for node in self.nodes.values():
             s += node.name + ':\n'
             s += '\tneigbor: %r\n' % node.neighbor
+            # s += '\tlanes_in: %r\n' % node.lanes_in
             s += '\tilds_in: %r\n' % node.ilds_in
-            s += '\tedges_in: %r\n' % node.edges_in
+            # s += '\tedges_in: %r\n' % node.edges_in
         logging.info(s)
         self._init_action_space()
         self._init_state_space()
@@ -319,14 +330,27 @@ class TrafficSimulator:
         rewards = []
         for node_name in self.node_names:
             queues = []
+            waits = []
             for ild in self.nodes[node_name].ilds_in:
-                lane_name = 'e:' + ild.split(':')[1]
-                queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
-            queues = np.array(queues)
-            if self.obj in ['queue', 'hybrid']:
-                queue = np.sum(queues)
-            if self.obj in ['wait', 'hybrid']:
-                wait = np.sum(self.nodes[node_name].waits * (queues > 0))
+                queues.append(self.sim.lanearea.getLastStepHaltingNumber(ild))
+                max_pos = 0
+                car_wait = 0
+                for vid in self.sim.lanearea.getLastStepVehicleIDs(ild):
+                    car_pos = self.sim.vehicle.getLanePosition(vid)
+                    if car_pos > max_pos:
+                        max_pos = car_pos
+                        car_wait = self.sim.vehicle.getWaitingTime(vid)
+                waits.append(car_wait)
+                # if self.name == 'real_net':
+                #     lane_name = ild.split(':')[1]
+                # else:
+                #     lane_name = 'e:' + ild.split(':')[1]
+                # queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
+
+            queue = np.sum(np.array(queues))
+            wait = np.sum(np.array(waits))
+            # if self.obj in ['wait', 'hybrid']:
+            #     wait = np.sum(self.nodes[node_name].waits * (queues > 0))
             if self.obj == 'queue':
                 reward = - queue
             elif self.obj == 'wait':
@@ -346,7 +370,17 @@ class TrafficSimulator:
                         cur_state.append(self.sim.lanearea.getLastStepVehicleNumber(ild))
                     cur_state = np.array(cur_state)
                 else:
-                    cur_state = node.waits
+                    cur_state = []
+                    for ild in node.ilds_in:
+                        max_pos = 0
+                        car_wait = 0
+                        for vid in self.sim.lanearea.getLastStepVehicleIDs(ild):
+                            car_pos = self.sim.vehicle.getLanePosition(vid)
+                            if car_pos > max_pos:
+                                max_pos = car_pos
+                                car_wait = self.sim.vehicle.getWaitingTime(vid)
+                        cur_state.append(car_wait)
+                    cur_state = np.array(cur_state)
                 if self.record_stats:
                     self.state_stat[state_name] += list(cur_state)
                 # normalization
@@ -371,7 +405,10 @@ class TrafficSimulator:
         queues = []
         for node_name in self.node_names:
             for ild in self.nodes[node_name].ilds_in:
-                lane_name = 'e:' + ild.split(':')[1]
+                if self.name == 'real_net':
+                    lane_name = ild.split(':')[1]
+                else:
+                    lane_name = 'e:' + ild.split(':')[1]
                 queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
         avg_queue = np.mean(np.array(queues))
         cur_traffic = {'episode': self.cur_episode,
@@ -397,8 +434,8 @@ class TrafficSimulator:
             # fingerprint is previous policy[:-1]
             node.num_fingerprint = node.n_a - 1
             node.num_state = self._get_node_state_num(node)
-            node.waves = np.zeros(node.num_state)
-            node.waits = np.zeros(node.num_state)
+            # node.waves = np.zeros(node.num_state)
+            # node.waits = np.zeros(node.num_state)
 
     def _set_phase(self, action, phase_type, phase_duration):
         for node_name, a in zip(self.node_names, list(action)):
@@ -437,7 +474,10 @@ class TrafficSimulator:
             for i in self.phase_map.get_red_lanes(node.phase_id, a):
                 red_lanes.add(node.lanes_in[i])
             for i in range(len(node.waits)):
-                lane = 'e:' + node.ilds_in[i].split(':')[1]
+                if self.name == 'real_net':
+                    lane = node.ilds_in[i].split(':')[1]
+                else:
+                    lane = 'e:' + node.ilds_in[i].split(':')[1]
                 if lane in red_lanes:
                     node.waits[i] += self.control_interval_sec
                 else:
@@ -514,7 +554,7 @@ class TrafficSimulator:
     def step(self, action):
         if self.agent == 'a2c':
             action = self._transfer_action(action)
-        self._update_waits(action)
+        # self._update_waits(action)
         self._set_phase(action, 'yellow', self.yellow_interval_sec)
         self._simulate(self.yellow_interval_sec)
         rest_interval_sec = self.control_interval_sec - self.yellow_interval_sec

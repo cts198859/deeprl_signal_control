@@ -245,9 +245,9 @@ class FcACPolicy(ACPolicy):
             summary_writer.add_summary(outs[0], global_step=global_step)
 
 
-class FPFcACPolicy(ACPolicy):
+class FPFcACPolicy(FcACPolicy):
     def __init__(self, n_s, n_a, n_w, n_f, n_step, n_fc_wave=128, n_fc_wait=32, n_fc_fp=32, n_lstm=64, name=None):
-        super().__init__(n_a, n_s, n_step, 'fpfc', name)
+        ACPolicy.__init__(self, n_a, n_s, n_step, 'fpfc', name)
         self.n_fc_wave = n_fc_wave
         self.n_fc_wait = n_fc_wait
         self.n_fc_fp = n_fc_fp
