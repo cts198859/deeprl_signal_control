@@ -281,6 +281,7 @@ class Trainer():
                    'test_id': -1,
                    'avg_reward': mean_reward,
                    'std_reward': std_reward}
+            self.data.append(log)
             self._add_summary(mean_reward, global_step)
             self.summary_writer.flush()
         if self.run_test:

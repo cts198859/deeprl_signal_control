@@ -333,7 +333,7 @@ class DeepQPolicy(QPolicy):
             self.qvalues = self._build_fc_net(self.S, self.n_fc)
 
     def forward(self, sess, ob):
-        return sess.run(self.qvalues, {self.S: [ob]})
+        return sess.run(self.qvalues, {self.S: np.array([ob])})
 
     def backward(self, sess, obs, acts, next_obs, dones, rs, cur_lr,
                  summary_writer=None, global_step=None):
