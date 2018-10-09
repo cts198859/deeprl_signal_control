@@ -173,7 +173,10 @@ class TrafficSimulator:
             if self.agent == 'greedy':
                 state.append(node.wave_state)
             elif self.agent == 'a2c':
-                state.append(np.concatenate([node.wave_state, node.wait_state]))
+                if 'wait' in self.state_names:
+                    state.append(np.concatenate([node.wave_state, node.wait_state]))
+                else:
+                    state.append(node.wave_state)
             else:
                 cur_state = [node.wave_state]
                 # include wave states of neighbors
@@ -184,7 +187,8 @@ class TrafficSimulator:
                         # discount the neigboring states
                         cur_state.append(self.nodes[nnode_name].wave_state * self.coop_gamma)
                 # include wait state
-                cur_state.append(node.wait_state)
+                if 'wait' in self.state_names:
+                    cur_state.append(node.wait_state)
                 # include fingerprints of neighbors
                 if self.agent == 'ma2c':
                     for nnode_name in node.neighbor:
@@ -329,23 +333,25 @@ class TrafficSimulator:
             queues = []
             waits = []
             for ild in self.nodes[node_name].ilds_in:
-                queues.append(self.sim.lanearea.getLastStepHaltingNumber(ild))
-                max_pos = 0
-                car_wait = 0
-                for vid in self.sim.lanearea.getLastStepVehicleIDs(ild):
-                    car_pos = self.sim.vehicle.getLanePosition(vid)
-                    if car_pos > max_pos:
-                        max_pos = car_pos
-                        car_wait = self.sim.vehicle.getWaitingTime(vid)
-                waits.append(car_wait)
+                if self.obj in ['queue', 'hybrid']:
+                    queues.append(self.sim.lanearea.getLastStepHaltingNumber(ild))
+                if self.obj in ['wait', 'hybrid']:
+                    max_pos = 0
+                    car_wait = 0
+                    for vid in self.sim.lanearea.getLastStepVehicleIDs(ild):
+                        car_pos = self.sim.vehicle.getLanePosition(vid)
+                        if car_pos > max_pos:
+                            max_pos = car_pos
+                            car_wait = self.sim.vehicle.getWaitingTime(vid)
+                    waits.append(car_wait)
                 # if self.name == 'real_net':
                 #     lane_name = ild.split(':')[1]
                 # else:
                 #     lane_name = 'e:' + ild.split(':')[1]
                 # queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
 
-            queue = np.sum(np.array(queues))
-            wait = np.sum(np.array(waits))
+            queue = np.sum(np.array(queues)) if len(queues) else 0
+            wait = np.sum(np.array(waits)) if len(waits) else 0
             # if self.obj in ['wait', 'hybrid']:
             #     wait = np.sum(self.nodes[node_name].waits * (queues > 0))
             if self.obj == 'queue':

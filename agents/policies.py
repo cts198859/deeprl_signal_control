@@ -78,6 +78,7 @@ class LstmACPolicy(ACPolicy):
         self.n_lstm = n_lstm
         self.n_fc_wait = n_fc_wait
         self.n_fc_wave = n_fc_wave
+        self.n_w = n_w
         self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_w]) # forward 1-step
         self.done_fw = tf.placeholder(tf.float32, [1])
         self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_w]) # backward n-step
@@ -106,9 +107,12 @@ class LstmACPolicy(ACPolicy):
             states = self.states[0]
         else:
             states = self.states[1]
-        h0 = fc(ob[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
-        h1 = fc(ob[:, self.n_s:], out_type + '_fct', self.n_fc_wait)
-        h = tf.concat([h0, h1], 1)
+        if self.n_w == 0:
+            h = fc(ob, out_type + '_fcw', self.n_fc_wave)
+        else:
+            h0 = fc(ob[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
+            h1 = fc(ob[:, self.n_s:], out_type + '_fct', self.n_fc_wait)
+            h = tf.concat([h0, h1], 1)
         h, new_states = lstm(h, done, states, out_type + '_lstm')
         out_val = self._build_out_net(h, out_type)
         return out_val, new_states
@@ -196,9 +200,12 @@ class FPLstmACPolicy(LstmACPolicy):
         else:
             states = self.states[1]
         h0 = fc(ob[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
-        h1 = fc(ob[:, self.n_s: (self.n_s + self.n_w)], out_type + '_fct', self.n_fc_wait)
-        h2 = fc(ob[:, (self.n_s + self.n_w):], out_type + '_fcf', self.n_fc_fp)
-        h = tf.concat([h0, h1, h2], 1)
+        h1 = fc(ob[:, (self.n_s + self.n_w):], out_type + '_fcf', self.n_fc_fp)
+        if self.n_w == 0:
+            h = tf.concat([h0, h1], 1)
+        else:
+            h2 = fc(ob[:, self.n_s: (self.n_s + self.n_w)], out_type + '_fct', self.n_fc_wait)
+            h = tf.concat([h0, h1, h2], 1)
         h, new_states = lstm(h, done, states, out_type + '_lstm')
         out_val = self._build_out_net(h, out_type)
         return out_val, new_states
@@ -210,6 +217,7 @@ class FcACPolicy(ACPolicy):
         self.n_fc_wave = n_fc_wave
         self.n_fc_wait = n_fc_wait
         self.n_fc = n_lstm
+        self.n_w = n_w
         self.obs = tf.placeholder(tf.float32, [None, n_s + n_w])
         with tf.variable_scope(self.name):
             # pi and v use separate nets
@@ -217,9 +225,12 @@ class FcACPolicy(ACPolicy):
             self.v = self._build_net('v')
 
     def _build_net(self, out_type):
-        h0 = fc(self.obs[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
-        h1 = fc(self.obs[:, self.n_s:], out_type + '_fct', self.n_fc_wait)
-        h = tf.concat([h0, h1], 1)
+        if self.n_w == 0:
+            h = fc(self.obs, out_type + '_fcw', self.n_fc_wave)
+        else:
+            h0 = fc(self.obs[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
+            h1 = fc(self.obs[:, self.n_s:], out_type + '_fct', self.n_fc_wait)
+            h = tf.concat([h0, h1], 1)
         h = fc(h, out_type + '_fc', self.n_fc)
         return self._build_out_net(h, out_type)
 
@@ -260,10 +271,13 @@ class FPFcACPolicy(FcACPolicy):
             self.v = self._build_net('v')
 
     def _build_net(self, out_type):
-        h0 = fc(self.obs[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
-        h1 = fc(self.obs[:, self.n_s:(self.n_s + self.n_w)], out_type + '_fct', self.n_fc_wait)
-        h2 = fc(self.obs[:, (self.n_s + self.n_w):], out_type + '_fcf', self.n_fc_fp)
-        h = tf.concat([h0, h1, h2], 1)
+        h0 = fc(ob[:, :self.n_s], out_type + '_fcw', self.n_fc_wave)
+        h1 = fc(ob[:, (self.n_s + self.n_w):], out_type + '_fcf', self.n_fc_fp)
+        if self.n_w == 0:
+            h = tf.concat([h0, h1], 1)
+        else:
+            h2 = fc(ob[:, self.n_s: (self.n_s + self.n_w)], out_type + '_fct', self.n_fc_wait)
+            h = tf.concat([h0, h1, h2], 1)
         h = fc(h, out_type + '_fc', self.n_fc)
         return self._build_out_net(h, out_type)
 

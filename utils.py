@@ -119,10 +119,10 @@ class Trainer():
         self.summary_writer = summary_writer
         self.run_test = run_test
         assert self.env.T % self.n_step == 0
+        self.data = []
         if run_test:
             self.test_num = self.env.test_num
             self.output_path = output_path
-            self.data = []
             logging.info('Testing: total test num: %d' % self.test_num)
         self._init_summary()
 
@@ -284,9 +284,8 @@ class Trainer():
             self.data.append(log)
             self._add_summary(mean_reward, global_step)
             self.summary_writer.flush()
-        if self.run_test:
-            df = pd.DataFrame(self.data)
-            df.to_csv(self.output_path + 'train_reward.csv')
+        df = pd.DataFrame(self.data)
+        df.to_csv(self.output_path + 'train_reward.csv')
 
 
 class Tester(Trainer):
