@@ -254,7 +254,7 @@ class MA2C(IA2C):
         self.sess.run(tf.global_variables_initializer())
 
 
-class IQL:
+class IQL(A2C):
     def __init__(self, n_s_ls, n_a_ls, total_step, model_config, seed=0, model_type='dqn'):
         self.name = 'iql'
         self.model_type = model_type
