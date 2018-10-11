@@ -120,9 +120,9 @@ class Trainer():
         self.run_test = run_test
         assert self.env.T % self.n_step == 0
         self.data = []
+        self.output_path = output_path
         if run_test:
             self.test_num = self.env.test_num
-            self.output_path = output_path
             logging.info('Testing: total test num: %d' % self.test_num)
         self._init_summary()
 

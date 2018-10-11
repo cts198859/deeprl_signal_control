@@ -368,6 +368,6 @@ class DeepQPolicy(QPolicy):
 
 class LRQPolicy(DeepQPolicy):
     def __init__(self, n_s, n_a, n_step, name=None):
-        super().__init__(n_a, n_s, n_step, 'lr', name)
+        QPolicy.__init__(self, n_a, n_s, n_step, 'lr', name)
         self.n_fc = []
         self._init_graph()
