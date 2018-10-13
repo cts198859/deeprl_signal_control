@@ -10,6 +10,7 @@ import tensorflow as tf
 import threading
 # from envs.small_grid_env import SmallGridEnv, SmallGridController
 from envs.large_grid_env import LargeGridEnv, LargeGridController
+from envs.real_net_env import RealNetEnv, RealNetController
 from agents.models import A2C, IA2C, MA2C, IQL
 from utils import (Counter, Trainer, Tester, Evaluator,
                    check_dir, copy_file, find_file,
@@ -57,6 +58,13 @@ def init_env(config, port=0, naive_policy=False):
         else:
             env = LargeGridEnv(config, port=port)
             policy = LargeGridController(env.node_names)
+            return env, policy
+    elif config.get('scenario') == 'real_net':
+        if not naive_policy:
+            return RealNetEnv(config, port=port)
+        else:
+            env = RealNetEnv(config, port=port)
+            policy = RealNetController(env.node_names)
             return env, policy
     else:
         if not naive_policy:
