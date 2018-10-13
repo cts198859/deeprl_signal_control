@@ -136,6 +136,21 @@ class RealNetEnv(TrafficSimulator):
                             seed=seed,
                             thread=self.sim_thread)
 
+    def plot_stat(self, rewards):
+        self.state_stat['reward'] = rewards
+        for name, data in self.state_stat.items():
+            fig = plt.figure(figsize=(8, 6))
+            plot_cdf(data)
+            plt.ylabel(name)
+            fig.savefig(self.output_path + self.name + '_' + name + '.png')
+
+
+def plot_cdf(X, c='b', label=None):
+    sorted_data = np.sort(X)
+    yvals = np.arange(len(sorted_data))/float(len(sorted_data)-1)
+    plt.plot(sorted_data, yvals, color=c, label=label)
+
+
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s',
                         level=logging.INFO)
@@ -147,7 +162,7 @@ if __name__ == '__main__':
     env = RealNetEnv(config['ENV_CONFIG'], 2, base_dir, is_record=True, record_stat=True)
     env.train_mode = False
     time.sleep(2)
-    ob = env.reset(gui=True)
+    ob = env.reset()
     controller = RealNetController(env.node_names, env.nodes)
     rewards = []
     while True:

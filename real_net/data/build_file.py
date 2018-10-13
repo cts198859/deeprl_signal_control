@@ -50,9 +50,9 @@ def output_flows(flow_rate, seed=None):
     flows1.append(('-10058#0', '-10086', '10071#5 10108#5 gneE5 10046#0'))
     flows.append(flows1)
 
-    vols_a = [3, 4, 5, 6, 4, 2, 1, 0, 0, 0]
-    vols_b = [0, 0, 0, 2, 4, 5, 6, 3, 2, 1]
-    times = np.arange(0, 3001, 300)
+    vols_a = [2, 3, 4, 6, 4, 2, 1, 0, 0, 0, 0]
+    vols_b = [0, 0, 0, 1, 2, 3, 5, 4, 3, 2, 1]
+    times = np.arange(0, 3301, 300)
 
     flow_str = '  <flow id="f:%s" departPos="random_free" from="%s" to="%s" via="%s" begin="%d" end="%d" vehsPerHour="%d" type="car"/>\n'
     output = '<routes>\n'
