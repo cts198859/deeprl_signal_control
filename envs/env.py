@@ -17,7 +17,6 @@ SEC_IN_MS = 1000
 
 class PhaseSet:
     def __init__(self, phases):
-        self.phases = {}
         self.num_phase = len(phases)
         self.num_lane = len(phases[0])
         self.phases = phases
@@ -156,7 +155,7 @@ class TrafficSimulator:
         raise NotImplementedError()
 
     def _get_node_state_num(self, node):
-        # assert len(node.lanes_in) == self.phase_map.get_lane_num(node.phase_id)
+        assert len(node.lanes_in) == self.phase_map.get_lane_num(node.phase_id)
         # wait / wave states for each lane
         return len(node.ilds_in)
 
@@ -210,6 +209,7 @@ class TrafficSimulator:
             if node_name in self.neighbor_map:
                 neighbor = self.neighbor_map[node_name]
             else:
+                logging.info('node %s can not be found!' % node_name)
                 neighbor = []
             nodes[node_name] = Node(node_name,
                                     neighbor=neighbor,
@@ -226,9 +226,9 @@ class TrafficSimulator:
                 # if edge_name not in edges_in:
                 #     edges_in.append(edge_name)
                 if self.name == 'real_net':
-                    allow_type = self.sim.lane.getAllowed(lane_name)
-                    if 'passenger' not in allow_type:
-                        continue
+                    # allow_type = self.sim.lane.getAllowed(lane_name)
+                    # if 'pedestrian' in allow_type:
+                    #     continue
                     ild_name = 'ild:' + lane_name
                 else:
                     ild_name = 'ild:' + lane_name.split(':')[-1]
@@ -238,7 +238,7 @@ class TrafficSimulator:
             nodes[node_name].ilds_in = ilds_in
         self.nodes = nodes
         self.node_names = sorted(list(nodes.keys()))
-        s = 'Env: init node information:\n'
+        s = 'Env: init %d node information:\n' % len(self.node_names)
         for node in self.nodes.values():
             s += node.name + ':\n'
             s += '\tneigbor: %r\n' % node.neighbor
