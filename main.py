@@ -8,7 +8,7 @@ import configparser
 import logging
 import tensorflow as tf
 import threading
-# from envs.small_grid_env import SmallGridEnv, SmallGridController
+from envs.small_grid_env import SmallGridEnv, SmallGridController
 from envs.large_grid_env import LargeGridEnv, LargeGridController
 from envs.real_net_env import RealNetEnv, RealNetController
 from agents.models import A2C, IA2C, MA2C, IQL
@@ -64,7 +64,7 @@ def init_env(config, port=0, naive_policy=False):
             return RealNetEnv(config, port=port)
         else:
             env = RealNetEnv(config, port=port)
-            policy = RealNetController(env.node_names)
+            policy = RealNetController(env.node_names, env.nodes)
             return env, policy
     else:
         if not naive_policy:

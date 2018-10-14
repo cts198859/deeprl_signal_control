@@ -161,18 +161,27 @@ if __name__ == '__main__':
         os.mkdir(base_dir)
     env = RealNetEnv(config['ENV_CONFIG'], 2, base_dir, is_record=True, record_stat=True)
     env.train_mode = False
-    time.sleep(2)
-    ob = env.reset()
+    time.sleep(1)
+    # ob = env.reset(gui=True)
     controller = RealNetController(env.node_names, env.nodes)
+    env.init_test_seeds(list(range(10000, 100001, 10000)))
     rewards = []
-    while True:
-        next_ob, _, done, reward = env.step(controller.forward(ob))
-        rewards.append(reward)
-        if done:
-            break
-        ob = next_ob
+    for i in range(10):
+        ob = env.reset(test_ind=i)
+        global_rewards = []
+        cur_step = 0
+        while True:
+            next_ob, reward, done, global_reward = env.step(controller.forward(ob))
+            global_rewards.append(global_reward)
+            rewards += list(reward)
+            cur_step += 1
+            if done:
+                break
+            ob = next_ob
+        env.terminate()
+        logging.info('step: %d, avg reward: %.2f' % (cur_step, np.mean(global_rewards)))
+        time.sleep(1)
     env.plot_stat(np.array(rewards))
-    logging.info('avg reward: %.2f' % np.mean(rewards))
     env.terminate()
     time.sleep(2)
     env.collect_tripinfo()

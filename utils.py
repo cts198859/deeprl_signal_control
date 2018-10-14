@@ -161,7 +161,7 @@ class Trainer():
             next_ob, reward, done, global_reward = self.env.step(action)
             rewards.append(global_reward)
             global_step = self.global_counter.next()
-            # self.cur_step += 1
+            self.cur_step += 1
             if self.agent.endswith('a2c'):
                 self.model.add_transition(ob, action, reward, value, done)
             else:
@@ -260,6 +260,7 @@ class Trainer():
             self.env.train_mode = True
             ob = self.env.reset()
             done = False
+            self.cur_step = 0
             rewards = []
             while True:
                 ob, done, R, cur_rewards = self.explore(ob, done)

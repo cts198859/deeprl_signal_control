@@ -286,7 +286,10 @@ class TrafficSimulator:
         command += ['--seed', str(seed)]
         command += ['--remote-port', str(self.port)]
         command += ['--no-step-log', 'True']
-        command += ['--time-to-teleport', '600'] # long teleport for safety
+        if self.name != 'real_net':
+            command += ['--time-to-teleport', '600'] # long teleport for safety
+        else:
+            command += ['--time-to-teleport', '300']
         command += ['--no-warnings', 'True']
         command += ['--duration-log.disable', 'True']
         # collect trip info if necessary
@@ -582,7 +585,7 @@ class TrafficSimulator:
             self.control_data.append(cur_control)
 
         # use local rewards in test
-        if not self.train_mode:
+        if not self.train_mode or self.name == 'real_net':
             return state, reward, done, global_reward
         if self.agent in ['a2c', 'greedy']:
             reward = global_reward

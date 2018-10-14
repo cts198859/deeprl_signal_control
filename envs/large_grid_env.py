@@ -69,7 +69,7 @@ class LargeGridEnv(TrafficSimulator):
         self.init_density = config.getfloat('init_density')
         super().__init__(config, output_path, is_record, record_stat, port=port)
 
-    def _get_node_phase_id(self, node):
+    def _get_node_phase_id(self, node_name):
         return PHASE_NUM
 
     def _init_large_neighbor_map(self):
