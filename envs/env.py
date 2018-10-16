@@ -14,6 +14,8 @@ import xml.etree.cElementTree as ET
 DEFAULT_PORT = 8000
 SEC_IN_MS = 1000
 
+# hard code real-net reward norm
+REALNET_REWARD_NORM = 20
 
 class PhaseSet:
     def __init__(self, phases):
@@ -229,7 +231,8 @@ class TrafficSimulator:
                     # allow_type = self.sim.lane.getAllowed(lane_name)
                     # if 'pedestrian' in allow_type:
                     #     continue
-                    ild_name = 'ild:' + lane_name
+                    # the ild measurements are incorrect in real net
+                    ild_name = lane_name
                 else:
                     ild_name = 'ild:' + lane_name.split(':')[-1]
                 if ild_name not in ilds_in:
@@ -337,11 +340,19 @@ class TrafficSimulator:
             waits = []
             for ild in self.nodes[node_name].ilds_in:
                 if self.obj in ['queue', 'hybrid']:
-                    queues.append(self.sim.lanearea.getLastStepHaltingNumber(ild))
+                    if self.name == 'real_net':
+                        cur_queue = min(10, self.sim.lane.getLastStepHaltingNumber(ild))
+                    else:
+                        cur_queue = self.sim.lanearea.getLastStepHaltingNumber(ild)
+                    queues.append(cur_queue)
                 if self.obj in ['wait', 'hybrid']:
                     max_pos = 0
                     car_wait = 0
-                    for vid in self.sim.lanearea.getLastStepVehicleIDs(ild):
+                    if self.name == 'real_net':
+                        cur_cars = self.sim.lane.getLastStepVehicleIDs(ild)
+                    else:
+                        cur_cars = self.sim.lanearea.getLastStepVehicleIDs(ild)
+                    for vid in cur_cars:
                         car_pos = self.sim.vehicle.getLanePosition(vid)
                         if car_pos > max_pos:
                             max_pos = car_pos
@@ -373,14 +384,22 @@ class TrafficSimulator:
                 if state_name == 'wave':
                     cur_state = []
                     for ild in node.ilds_in:
-                        cur_state.append(self.sim.lanearea.getLastStepVehicleNumber(ild))
+                        if self.name == 'real_net':
+                            cur_wave = self.sim.lane.getLastStepVehicleNumber(ild)
+                        else:
+                            cur_wave = self.sim.lanearea.getLastStepVehicleNumber(ild)
+                        cur_state.append(cur_wave)
                     cur_state = np.array(cur_state)
                 else:
                     cur_state = []
                     for ild in node.ilds_in:
                         max_pos = 0
                         car_wait = 0
-                        for vid in self.sim.lanearea.getLastStepVehicleIDs(ild):
+                        if self.name == 'real_net':
+                            cur_cars = self.sim.lane.getLastStepVehicleIDs(ild)
+                        else:
+                            cur_cars = self.sim.lanearea.getLastStepVehicleIDs(ild)
+                        for vid in cur_cars:
                             car_pos = self.sim.vehicle.getLanePosition(vid)
                             if car_pos > max_pos:
                                 max_pos = car_pos
@@ -415,7 +434,8 @@ class TrafficSimulator:
         for node_name in self.node_names:
             for ild in self.nodes[node_name].ilds_in:
                 if self.name == 'real_net':
-                    lane_name = ild.split(':')[1]
+                    # lane_name = ild.split(':')[1]
+                    lane_name = ild
                 else:
                     lane_name = 'e:' + ild.split(':')[1]
                 queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
@@ -484,7 +504,8 @@ class TrafficSimulator:
                 red_lanes.add(node.lanes_in[i])
             for i in range(len(node.waits)):
                 if self.name == 'real_net':
-                    lane = node.ilds_in[i].split(':')[1]
+                    # lane = node.ilds_in[i].split(':')[1]
+                    lane = node.ilds_in[i]
                 else:
                     lane = 'e:' + node.ilds_in[i].split(':')[1]
                 if lane in red_lanes:
@@ -585,16 +606,17 @@ class TrafficSimulator:
             self.control_data.append(cur_control)
 
         # use local rewards in test
-        if not self.train_mode or self.name == 'real_net':
+        if not self.train_mode:
             return state, reward, done, global_reward
         if self.agent in ['a2c', 'greedy']:
             reward = global_reward
-        elif self.agent != 'ma2c':
+        elif (self.name != 'real_net') and (self.agent != 'ma2c'):
             # global reward is shared in independent rl
             new_reward = [global_reward] * len(reward)
             reward = np.array(new_reward)
         else:
-            # discounted global reward
+            # discounted global reward for ma2c
+            # also applied to other independent rls in real net
             new_reward = []
             for node_name, r in zip(self.node_names, reward):
                 cur_reward = r
@@ -616,7 +638,11 @@ class TrafficSimulator:
                 #             cur_reward += (self.coop_gamma ** distance) * reward[i]
                 #         else:
                 #             cur_reward += (self.coop_gamma ** self.max_distance) * reward[i]
-                new_reward.append(cur_reward)
+                if self.name != 'real_net':
+                    new_reward.append(cur_reward)
+                else:
+                    n_node = 1 + len(self.nodes[node_name].neighbor)
+                    new_reward.append(cur_reward / (n_node * REALNET_REWARD_NORM))
             reward = np.array(new_reward)
         return state, reward, done, global_reward
 

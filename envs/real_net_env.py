@@ -102,7 +102,8 @@ class RealNetController:
                 if signal == 'G':
                     # find controlled lane
                     lane = node.lanes_in[i]
-                    ild = 'ild:' + lane
+                    # ild = 'ild:' + lane
+                    ild = lane
                     # if it has not been counted, add the wave
                     if ild not in visited_ilds:
                         j = node.ilds_in.index(ild)
@@ -172,6 +173,8 @@ if __name__ == '__main__':
         cur_step = 0
         while True:
             next_ob, reward, done, global_reward = env.step(controller.forward(ob))
+            # for node_name, node_ob in zip(env.node_names, next_ob):
+                # logging.info('%d, %s:%r\n' % (cur_step, node_name, node_ob))
             global_rewards.append(global_reward)
             rewards += list(reward)
             cur_step += 1

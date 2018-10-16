@@ -119,7 +119,7 @@ class A2C:
 
     def add_transition(self, ob, action, reward, value, done):
         # Hard code the reward norm for negative reward only
-        if (self.reward_norm) and (reward < 0):
+        if (self.reward_norm):
             reward /= self.reward_norm
         if self.reward_clip:
             reward = np.clip(reward, -self.reward_clip, self.reward_clip)
@@ -213,9 +213,7 @@ class IA2C(A2C):
 
     def add_transition(self, obs, actions, rewards, values, done):
         if (self.reward_norm):
-            for i in range(len(rewards)):
-                if rewards[i] < 0:
-                    rewards[i] = rewards[i] / self.reward_norm
+            rewards = rewards / self.reward_norm
         if self.reward_clip:
             rewards = np.clip(rewards, -self.reward_clip, self.reward_clip)
         for i in range(self.n_agent):
@@ -343,9 +341,7 @@ class IQL(A2C):
 
     def add_transition(self, obs, actions, rewards, next_obs, done):
         if (self.reward_norm):
-            for i in range(len(rewards)):
-                if rewards[i] < 0:
-                    rewards[i] = rewards[i] / self.reward_norm
+            rewards = rewards / self.reward_norm
         if self.reward_clip:
             rewards = np.clip(rewards, -self.reward_clip, self.reward_clip)
         for i in range(self.n_agent):
