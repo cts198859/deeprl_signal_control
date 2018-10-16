@@ -8,6 +8,7 @@ import configparser
 import logging
 import tensorflow as tf
 import threading
+from envs.test_env import GymEnv
 from envs.small_grid_env import SmallGridEnv, SmallGridController
 from envs.large_grid_env import LargeGridEnv, LargeGridController
 from envs.real_net_env import RealNetEnv, RealNetController
@@ -66,6 +67,8 @@ def init_env(config, port=0, naive_policy=False):
             env = RealNetEnv(config, port=port)
             policy = RealNetController(env.node_names, env.nodes)
             return env, policy
+    elif config.get('scenario') in ['Acrobot-v1', 'CartPole-v0', 'MountainCar-v0']:
+        return GymEnv(config.get('scenario'))
     else:
         if not naive_policy:
             return None
