@@ -169,9 +169,9 @@ class Trainer():
             # logging
             if self.global_counter.should_log():
                 logging.info('''Training: global step %d, episode step %d,
-                                   ob: %s, a: %s, pi: %s, r: %.2f, done: %r''' %
+                                   ob: %s, a: %s, pi: %s, r: %.2f, train r: %.2f, done: %r''' %
                              (global_step, self.cur_step,
-                              str(ob), str(action), str(policy), global_reward, done))
+                              str(ob), str(action), str(policy), global_reward, np.mean(reward), done))
             # # termination
             # if done:
             #     self.env.terminate()
@@ -181,6 +181,8 @@ class Trainer():
             #     cum_reward = 0
             #     self.cur_step = 0
             # else:
+            if done:
+                break
             ob = next_ob
         if self.agent.endswith('a2c'):
             if done:

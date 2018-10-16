@@ -312,7 +312,7 @@ class QPolicy:
         with tf.variable_scope(self.name + '_q', reuse=True):
             q0s = self._build_fc_net(self.S, self.n_fc)
             q0 = tf.reduce_sum(q0s * A_sparse, axis=1)
-        with tf.variable_scope(self.name + '_tq'):
+        with tf.variable_scope(self.name + '_q', reuse=True):
             q1s = self._build_fc_net(self.S1, self.n_fc)
             q1 = tf.reduce_max(q1s, axis=1)
         tq = tf.stop_gradient(tf.where(self.DONE, self.R, self.R + gamma * q1))
@@ -329,7 +329,8 @@ class QPolicy:
         if self.name.endswith('_0'):
             summaries = []
             summaries.append(tf.summary.scalar('train/%s_loss' % self.name, self.loss))
-            # summaries.append(tf.summary.scalar('train/%s_lr' % self.name, self.lr))
+            summaries.append(tf.summary.scalar('train/%s_q' % self.name, q0))
+            summaries.append(tf.summary.scalar('train/%s_tq' % self.name, tq))
             summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
             self.summary = tf.summary.merge(summaries)
 

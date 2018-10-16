@@ -610,13 +610,15 @@ class TrafficSimulator:
             return state, reward, done, global_reward
         if self.agent in ['a2c', 'greedy']:
             reward = global_reward
-        elif (self.name != 'real_net') and (self.agent != 'ma2c'):
+        elif self.agent != 'ma2c':
             # global reward is shared in independent rl
             new_reward = [global_reward] * len(reward)
             reward = np.array(new_reward)
+            if self.name == 'real_net':
+                # reward normalization in env for realnet
+                reward = reward / (len(self.node_names) * REALNET_REWARD_NORM)
         else:
             # discounted global reward for ma2c
-            # also applied to other independent rls in real net
             new_reward = []
             for node_name, r in zip(self.node_names, reward):
                 cur_reward = r

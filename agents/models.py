@@ -278,6 +278,7 @@ class IQL(A2C):
             self.total_step = total_step
             self._init_scheduler(model_config)
             self._init_train(model_config)
+        self.cur_step = 0
         self.sess.run(tf.global_variables_initializer())
 
     def _init_policy(self, n_s, n_a, model_config, agent_name=None):
@@ -314,19 +315,21 @@ class IQL(A2C):
         buffer_size = model_config.getfloat('buffer_size')
         self.trans_buffer_ls = []
         for i in range(self.n_agent):
-            self.policy_ls[i].prepare_loss(gamma, max_grad_norm)
+            self.policy_ls[i].prepare_loss(max_grad_norm, gamma)
             self.trans_buffer_ls.append(ReplayBuffer(buffer_size, self.n_step))
 
     def backward(self, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)
+        if self.trans_buffer_ls[0].size < self.trans_buffer_ls[0].batch_size:
+            return
         for i in range(self.n_agent):
-            # for k in range(self.n_step):
-            obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
-            if i == 0:
-                self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
-                                           summary_writer=summary_writer, global_step=global_step)
-            else:
-                self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
+            for k in range(10):
+                obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
+                if i == 0:
+                    self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
+                                               summary_writer=summary_writer, global_step=global_step + k)
+                else:
+                    self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
 
     def forward(self, obs, mode='act'):
         eps = self.eps_scheduler.get(1)
