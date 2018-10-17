@@ -334,13 +334,15 @@ class IQL(A2C):
     def forward(self, obs, mode='act'):
         eps = self.eps_scheduler.get(1)
         action = []
+        qs_ls = []
         for i in range(self.n_agent):
+            qs = self.policy_ls[i].forward(self.sess, obs[i])
             if (mode == 'explore') and (np.random.random() < eps):
                 action.append(np.random.randint(self.n_a_ls[i]))
             else:
-                qs = self.policy_ls[i].forward(self.sess, obs[i])
                 action.append(np.argmax(qs))
-        return action
+            qs_ls.append(qs)
+        return action, qs_ls
 
     def add_transition(self, obs, actions, rewards, next_obs, done):
         if (self.reward_norm):

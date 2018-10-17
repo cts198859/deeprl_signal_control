@@ -30,6 +30,10 @@ class GymEnv:
                 done = True
             return np.array([scale_ob(np.ravel(ob))]), np.array([r]), done, r
 
+        def terminate():
+            return
+
         self.seed = env.seed
         self.step = step
         self.reset = reset
+        self.terminate = terminate

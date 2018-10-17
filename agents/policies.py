@@ -329,8 +329,8 @@ class QPolicy:
         if self.name.endswith('_0'):
             summaries = []
             summaries.append(tf.summary.scalar('train/%s_loss' % self.name, self.loss))
-            summaries.append(tf.summary.scalar('train/%s_q' % self.name, q0))
-            summaries.append(tf.summary.scalar('train/%s_tq' % self.name, tq))
+            summaries.append(tf.summary.scalar('train/%s_q' % self.name, tf.reduce_mean(q0)))
+            summaries.append(tf.summary.scalar('train/%s_tq' % self.name, tf.reduce_mean(tq)))
             summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
             self.summary = tf.summary.merge(summaries)
 

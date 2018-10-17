@@ -156,8 +156,7 @@ class Trainer():
                     for pi in policy:
                         action.append(np.random.choice(np.arange(len(pi)), p=pi))
             else:
-                action = self.model.forward(ob, mode='explore')
-                policy = []
+                action, policy = self.model.forward(ob, mode='explore')
             next_ob, reward, done, global_reward = self.env.step(action)
             rewards.append(global_reward)
             global_step = self.global_counter.next()
@@ -208,7 +207,7 @@ class Trainer():
                     for pi in policy:
                         action.append(np.argmax(np.array(pi)))
             else:
-                action = self.model.forward(ob)
+                action, _ = self.model.forward(ob)
             next_ob, reward, done, global_reward = self.env.step(action)
             rewards.append(global_reward)
             if done:

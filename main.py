@@ -8,7 +8,7 @@ import configparser
 import logging
 import tensorflow as tf
 import threading
-from envs.test_env import GymEnv
+# from envs.test_env import GymEnv
 from envs.small_grid_env import SmallGridEnv, SmallGridController
 from envs.large_grid_env import LargeGridEnv, LargeGridController
 from envs.real_net_env import RealNetEnv, RealNetController
