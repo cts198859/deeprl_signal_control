@@ -301,6 +301,9 @@ class QPolicy:
         q = fc(h, 'q', self.n_a, act=lambda x: x)
         return tf.squeeze(q)
 
+    def _build_net(self):
+        raise NotImplementedError()
+
     def prepare_loss(self, max_grad_norm, gamma):
         self.A = tf.placeholder(tf.int32, [self.n_step])
         self.S1 = tf.placeholder(tf.float32, [self.n_step, self.n_s])
@@ -310,10 +313,10 @@ class QPolicy:
 
         # backward
         with tf.variable_scope(self.name + '_q', reuse=True):
-            q0s = self._build_fc_net(self.S, self.n_fc)
+            q0s = self._build_net()
             q0 = tf.reduce_sum(q0s * A_sparse, axis=1)
         with tf.variable_scope(self.name + '_q', reuse=True):
-            q1s = self._build_fc_net(self.S1, self.n_fc)
+            q1s = self._build_net()
             q1 = tf.reduce_max(q1s, axis=1)
         tq = tf.stop_gradient(tf.where(self.DONE, self.R, self.R + gamma * q1))
         self.loss = tf.reduce_mean(tf.square(q0 - tq))
@@ -352,7 +355,7 @@ class DeepQPolicy(QPolicy):
             h0 = fc(self.S[:, :self.n_s], 'q_fcw', self.n_fc0)
             h1 = fc(self.S[:, self.n_s:], 'q_fct', self.n_fc0 / 4)
             h = tf.concat([h0, h1], 1)
-        self._build_fc_net(h, [self.n_fc])
+        return self._build_fc_net(h, [self.n_fc])
 
     def forward(self, sess, ob):
         return sess.run(self.qvalues, {self.S: np.array([ob])})
@@ -379,5 +382,7 @@ class LRQPolicy(DeepQPolicy):
         QPolicy.__init__(self, n_a, n_s, n_step, 'lr', name)
         self.S = tf.placeholder(tf.float32, [None, n_s])
         with tf.variable_scope(self.name + '_q'):
-            self.qvalues = self._build_fc_net(self.S, [])
+            self.qvalues = self._build_net()
 
+    def _build_net(self):
+        return self._build_fc_net(self.S, [])
