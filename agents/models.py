@@ -253,7 +253,7 @@ class MA2C(IA2C):
 
 
 class IQL(A2C):
-    def __init__(self, n_s_ls, n_a_ls, total_step, model_config, seed=0, model_type='dqn'):
+    def __init__(self, n_s_ls, n_a_ls, n_w_ls, total_step, model_config, seed=0, model_type='dqn'):
         self.name = 'iql'
         self.model_type = model_type
         self.agents = []
@@ -262,6 +262,7 @@ class IQL(A2C):
         self.reward_norm = model_config.getfloat('reward_norm')
         self.n_s_ls = n_s_ls
         self.n_a_ls = n_a_ls
+        self.n_w_ls = n_w_ls
         self.n_step = model_config.getint('batch_size')
         # init tf
         tf.reset_default_graph()
@@ -269,9 +270,9 @@ class IQL(A2C):
         config = tf.ConfigProto(allow_soft_placement=True)
         self.sess = tf.Session(config=config)
         self.policy_ls = []
-        for i, (n_s, n_a) in enumerate(zip(self.n_s_ls, self.n_a_ls)):
+        for i, (n_s, n_a, n_w) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_w_ls)):
             # agent_name is needed to differentiate multi-agents
-            self.policy_ls.append(self._init_policy(n_s, n_a, model_config, agent_name=str(i)))
+            self.policy_ls.append(self._init_policy(n_s, n_a, n_w, model_config, agent_name=str(i)))
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
@@ -281,11 +282,11 @@ class IQL(A2C):
         self.cur_step = 0
         self.sess.run(tf.global_variables_initializer())
 
-    def _init_policy(self, n_s, n_a, model_config, agent_name=None):
+    def _init_policy(self, n_s, n_a, n_w, model_config, agent_name=None):
         if self.model_type == 'dqn':
             n_h = model_config.getint('num_h')
             n_fc = model_config.getint('num_fc')
-            policy = DeepQPolicy(n_s, n_a, self.n_step, n_fc0=n_fc, n_fc=n_h, name=agent_name)
+            policy = DeepQPolicy(n_s - n_w, n_a, n_w, self.n_step, n_fc0=n_fc, n_fc=n_h, name=agent_name)
         else:
             policy = LRQPolicy(n_s, n_a, self.n_step, name=agent_name)
         return policy
@@ -332,7 +333,8 @@ class IQL(A2C):
                     self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
 
     def forward(self, obs, mode='act'):
-        eps = self.eps_scheduler.get(1)
+        if mode == 'explore':
+            eps = self.eps_scheduler.get(1)
         action = []
         qs_ls = []
         for i in range(self.n_agent):

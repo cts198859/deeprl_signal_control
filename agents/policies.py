@@ -336,16 +336,23 @@ class QPolicy:
 
 
 class DeepQPolicy(QPolicy):
-    def __init__(self, n_s, n_a, n_step, n_fc0=128, n_fc=64, name=None):
+    def __init__(self, n_s, n_a, n_w, n_step, n_fc0=128, n_fc=64, name=None):
         super().__init__(n_a, n_s, n_step, 'dqn', name)
-        self.n_fc = [n_fc0, n_fc]
-        self._init_graph()
-
-    def _init_graph(self):
-        self.S = tf.placeholder(tf.float32, [None, self.n_s])
-        # forward
+        self.n_fc = n_fc
+        self.n_fc0 = n_fc0
+        self.n_w = n_w
+        self.S = tf.placeholder(tf.float32, [None, n_s + n_w])
         with tf.variable_scope(self.name + '_q'):
-            self.qvalues = self._build_fc_net(self.S, self.n_fc)
+            self.qvalues = self._build_net()
+
+    def _build_net(self):
+        if self.n_w == 0:
+            h = fc(self.S, 'q_fcw', self.n_fc0)
+        else:
+            h0 = fc(self.S[:, :self.n_s], 'q_fcw', self.n_fc0)
+            h1 = fc(self.S[:, self.n_s:], 'q_fct', self.n_fc0 / 4)
+            h = tf.concat([h0, h1], 1)
+        self._build_fc_net(h, [self.n_fc])
 
     def forward(self, sess, ob):
         return sess.run(self.qvalues, {self.S: np.array([ob])})
@@ -370,5 +377,7 @@ class DeepQPolicy(QPolicy):
 class LRQPolicy(DeepQPolicy):
     def __init__(self, n_s, n_a, n_step, name=None):
         QPolicy.__init__(self, n_a, n_s, n_step, 'lr', name)
-        self.n_fc = []
-        self._init_graph()
+        self.S = tf.placeholder(tf.float32, [None, n_s])
+        with tf.variable_scope(self.name + '_q'):
+            self.qvalues = self._build_fc_net(self.S, [])
+
