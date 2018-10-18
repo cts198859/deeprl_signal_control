@@ -111,10 +111,10 @@ def train(args):
         model = MA2C(env.n_s_ls, env.n_a_ls, env.n_w_ls, env.n_f_ls, total_step,
                      config['MODEL_CONFIG'], seed=seed)
     elif env.agent == 'iqld':
-        model = IQL(env.n_s_ls, env.n_a_ls, total_step, config['MODEL_CONFIG'],
+        model = IQL(env.n_s_ls, env.n_a_ls, env.n_w_ls, total_step, config['MODEL_CONFIG'],
                     seed=0, model_type='dqn')
     else:
-        model = IQL(env.n_s_ls, env.n_a_ls, total_step, config['MODEL_CONFIG'],
+        model = IQL(env.n_s_ls, env.n_a_ls, env.n_w_ls, total_step, config['MODEL_CONFIG'],
                     seed=0, model_type='lr')
 
     # disable multi-threading for safe SUMO implementation
@@ -180,10 +180,10 @@ def evaluate_fn(agent_dir, output_dir, seeds, port):
         elif agent == 'ma2c':
             model = MA2C(env.n_s_ls, env.n_a_ls, env.n_w_ls, env.n_f_ls, 0, config['MODEL_CONFIG'])
         elif agent == 'iqld':
-            model = IQL(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'],
+            model = IQL(env.n_s_ls, env.n_a_ls, env.n_w_ls, 0, config['MODEL_CONFIG'],
                         seed=0, model_type='dqn')
         else:
-            model = IQL(env.n_s_ls, env.n_a_ls, 0, config['MODEL_CONFIG'],
+            model = IQL(env.n_s_ls, env.n_a_ls, env.n_w_ls, 0, config['MODEL_CONFIG'],
                         seed=0, model_type='lr')
         if not model.load(agent_dir + '/'):
             return
