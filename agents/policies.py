@@ -313,10 +313,10 @@ class QPolicy:
 
         # backward
         with tf.variable_scope(self.name + '_q', reuse=True):
-            q0s = self._build_net()
+            q0s = self._build_net(self.S)
             q0 = tf.reduce_sum(q0s * A_sparse, axis=1)
         with tf.variable_scope(self.name + '_q', reuse=True):
-            q1s = self._build_net()
+            q1s = self._build_net(self.S1)
             q1 = tf.reduce_max(q1s, axis=1)
         tq = tf.stop_gradient(tf.where(self.DONE, self.R, self.R + gamma * q1))
         self.loss = tf.reduce_mean(tf.square(q0 - tq))
@@ -346,14 +346,14 @@ class DeepQPolicy(QPolicy):
         self.n_w = n_w
         self.S = tf.placeholder(tf.float32, [None, n_s + n_w])
         with tf.variable_scope(self.name + '_q'):
-            self.qvalues = self._build_net()
+            self.qvalues = self._build_net(self.S)
 
-    def _build_net(self):
+    def _build_net(self, S):
         if self.n_w == 0:
-            h = fc(self.S, 'q_fcw', self.n_fc0)
+            h = fc(S, 'q_fcw', self.n_fc0)
         else:
-            h0 = fc(self.S[:, :self.n_s], 'q_fcw', self.n_fc0)
-            h1 = fc(self.S[:, self.n_s:], 'q_fct', self.n_fc0 / 4)
+            h0 = fc(S[:, :self.n_s], 'q_fcw', self.n_fc0)
+            h1 = fc(S[:, self.n_s:], 'q_fct', self.n_fc0 / 4)
             h = tf.concat([h0, h1], 1)
         return self._build_fc_net(h, [self.n_fc])
 
@@ -382,7 +382,7 @@ class LRQPolicy(DeepQPolicy):
         QPolicy.__init__(self, n_a, n_s, n_step, 'lr', name)
         self.S = tf.placeholder(tf.float32, [None, n_s])
         with tf.variable_scope(self.name + '_q'):
-            self.qvalues = self._build_net()
+            self.qvalues = self._build_net(self.S)
 
-    def _build_net(self):
-        return self._build_fc_net(self.S, [])
+    def _build_net(self, S):
+        return self._build_fc_net(S, [])
