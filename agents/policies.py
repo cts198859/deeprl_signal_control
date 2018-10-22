@@ -306,7 +306,7 @@ class QPolicy:
 
     def prepare_loss(self, max_grad_norm, gamma):
         self.A = tf.placeholder(tf.int32, [self.n_step])
-        self.S1 = tf.placeholder(tf.float32, [self.n_step, self.n_s])
+        self.S1 = tf.placeholder(tf.float32, [self.n_step, self.n_s + self.n_w])
         self.R = tf.placeholder(tf.float32, [self.n_step])
         self.DONE = tf.placeholder(tf.bool, [self.n_step])
         A_sparse = tf.one_hot(self.A, self.n_a)
@@ -381,6 +381,7 @@ class LRQPolicy(DeepQPolicy):
     def __init__(self, n_s, n_a, n_step, name=None):
         QPolicy.__init__(self, n_a, n_s, n_step, 'lr', name)
         self.S = tf.placeholder(tf.float32, [None, n_s])
+        self.n_w = 0
         with tf.variable_scope(self.name + '_q'):
             self.qvalues = self._build_net(self.S)
 
