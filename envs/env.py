@@ -440,6 +440,7 @@ class TrafficSimulator:
                     lane_name = 'e:' + ild.split(':')[1]
                 queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
         avg_queue = np.mean(np.array(queues))
+        std_queue = np.std(np.array(queues))
         cur_traffic = {'episode': self.cur_episode,
                        'time_sec': self.cur_sec,
                        'number_total_car': num_tot_car,
@@ -447,6 +448,7 @@ class TrafficSimulator:
                        'number_arrived_car': num_out_car,
                        'avg_wait_sec': avg_waiting_time,
                        'avg_speed_mps': avg_speed,
+                       'std_queue': std_queue,
                        'avg_queue': avg_queue}
         self.traffic_data.append(cur_traffic)
 
