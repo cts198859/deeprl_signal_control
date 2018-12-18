@@ -196,7 +196,9 @@ class Trainer():
         ob = self.env.reset(test_ind=test_ind)
         rewards = []
         while True:
-            if self.agent.endswith('a2c'):
+            if self.agent == 'greedy':
+                action = self.model.forward(ob)
+            elif self.agent.endswith('a2c'):
                 policy = self.model.forward(ob, False, 'p')
                 if self.agent == 'ma2c':
                     self.env.update_fingerprint(policy)

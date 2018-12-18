@@ -19,7 +19,7 @@ from utils import (Counter, Trainer, Tester, Evaluator,
                    plot_evaluation, plot_train)
 
 def parse_args():
-    default_base_dir = '/Users/tchu/Documents/rl_test/signal_control_results/eval_oct07'
+    default_base_dir = '/Users/tchu/Documents/rl_test/signal_control_results/eval_dec16/real_net'
     default_config_dir = './config/config_test_large.ini'
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-dir', type=str, required=False,
