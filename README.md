@@ -46,7 +46,7 @@ python3 main.py --base-dir [base_dir] evaluate --agents [agent names] --evaluate
 Evaluation data will be output to `[base_dir]/eva_data`, and make sure evaluation seeds are different from those used in training.
 
 ## Citation
-If you find this useful in your research, please cite our paper "Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control" ([early access version](https://ieeexplore.ieee.org/document/8667868)):
+If you find this useful in your research, please cite our paper "Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control" ([early access version](https://ieeexplore.ieee.org/document/8667868), [preprint version](https://arxiv.org/pdf/1903.04527.pdf)):
 ~~~
 @ARTICLE{8667868, 
 author={T. {Chu} and J. {Wang} and L. {Codecà} and Z. {Li}}, 
