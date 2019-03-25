@@ -48,16 +48,11 @@ Evaluation data will be output to `[base_dir]/eva_data`, and make sure evaluatio
 ## Citation
 If you find this useful in your research, please cite our paper "Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control" ([early access version](https://ieeexplore.ieee.org/document/8667868), [preprint version](https://arxiv.org/pdf/1903.04527.pdf)):
 ~~~
-@ARTICLE{8667868, 
-author={T. {Chu} and J. {Wang} and L. {Codecà} and Z. {Li}}, 
-journal={IEEE Transactions on Intelligent Transportation Systems}, 
-title={Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control}, 
-year={2019}, 
-volume={}, 
-number={}, 
-pages={1-10}, 
-keywords={Reinforcement learning;Scalability;Heuristic algorithms;Mathematical model;Codecs;Neural networks;Convergence;Adaptive traffic signal control;reinforcement learning;multi-agent reinforcement learning;deep reinforcement learning;actor-critic.}, 
-doi={10.1109/TITS.2019.2901791},
-ISSN={1524-9050}, 
-month={},}
+@article{chu2019multi,
+  title={Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control},
+  author={Chu, Tianshu and Wang, Jie and Codec{\`a}, Lara and Li, Zhaojian},
+  journal={IEEE Transactions on Intelligent Transportation Systems},
+  year={2019},
+  publisher={IEEE}
+}
 ~~~
