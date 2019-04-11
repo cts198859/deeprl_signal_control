@@ -32,7 +32,7 @@ To train a new agent, run
 ~~~
 python3 main.py --base-dir [base_dir] train --config-dir [config_dir] --test-mode no_test
 ~~~
-`no_test` is suggested, since it may slow down the training speed.
+`no_test` is suggested, since tests will significantly slow down the training speed.
 
 To access tensorboard during training, run
 ~~~
