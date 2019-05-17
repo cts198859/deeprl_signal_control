@@ -350,45 +350,40 @@ def output_config(thread=None):
     return str_config
 
 
-def get_ild_str(from_node, to_node, ild_in=None, ild_out=None):
+def get_ild_str(from_node, to_node, ild_str, lane_i=0):
     edge = '%s,%s' % (from_node, to_node)
-    ild_str = ''
-    if ild_in:
-        ild_str += ild_in % (edge, 'e:' + edge)
-    if ild_out:
-        ild_str += ild_out % (edge, 'e:' + edge)
-    return ild_str
+    return ild_str % (edge, lane_i, 'e:' + edge, lane_i)
 
 
-def output_ild(ild_in, ild_out):
+def output_ild(ild):
     str_adds = '<additional>\n'
     for i in [1, 2, 3]:
         to_node = 'nt1'
         from_node = 'np' + str(i)
-        str_adds += get_ild_str(from_node, to_node, ild_out=ild_out)
+        str_adds += get_ild_str(from_node, to_node, ild)
     for i in [8, 9]:
         to_node = 'nt4'
         from_node = 'np' + str(i)
-        str_adds += get_ild_str(from_node, to_node, ild_out=ild_out)
-    str_adds += get_ild_str('nt1', 'nt2', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('nt1', 'npc', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('nt1', 'nt6', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('npc', 'nt3', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('npc', 'nt5', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('nt5', 'nt6', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('nt4', 'nt3', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('nt4', 'nt5', ild_in=ild_in, ild_out=ild_out)
-    str_adds += get_ild_str('nt3', 'nt2', ild_in=ild_in, ild_out=ild_out)
-    for i in [12, 13]:
-        from_node = 'nt6'
-        to_node = 'np' + str(i)
-        str_adds += get_ild_str(from_node, to_node, ild_in=ild_in)
-    for i in [4, 5]:
-        from_node = 'nt2'
-        to_node = 'np' + str(i)
-        str_adds += get_ild_str(from_node, to_node, ild_in=ild_in)
-    str_adds += get_ild_str('nt5', 'np11', ild_in=ild_in)
-    str_adds += get_ild_str('nt3', 'np6', ild_in=ild_in)
+        str_adds += get_ild_str(from_node, to_node, ild)
+    str_adds += get_ild_str('nt1', 'nt2', ild)
+    str_adds += get_ild_str('nt1', 'npc', ild)
+    str_adds += get_ild_str('nt1', 'nt6', ild)
+    str_adds += get_ild_str('npc', 'nt3', ild)
+    str_adds += get_ild_str('npc', 'nt5', ild)
+    str_adds += get_ild_str('nt5', 'nt6', ild)
+    str_adds += get_ild_str('nt4', 'nt3', ild)
+    str_adds += get_ild_str('nt4', 'nt5', ild)
+    str_adds += get_ild_str('nt3', 'nt2', ild)
+    # for i in [12, 13]:
+    #     from_node = 'nt6'
+    #     to_node = 'np' + str(i)
+    #     str_adds += get_ild_str(from_node, to_node, ild_in=ild_in)
+    # for i in [4, 5]:
+    #     from_node = 'nt2'
+    #     to_node = 'np' + str(i)
+    #     str_adds += get_ild_str(from_node, to_node, ild_in=ild_in)
+    # str_adds += get_ild_str('nt5', 'np11', ild_in=ild_in)
+    # str_adds += get_ild_str('nt3', 'np6', ild_in=ild_in)
     str_adds += '</additional>\n'
     return str_adds
 
@@ -452,9 +447,8 @@ def main():
     os.system('jtrrouter -t exp.turns.xml -n exp.net.xml -r exp.raw.rou.xml -o exp.rou.xml')
 
     # add.xml file
-    ild_out = '  <inductionLoop file="ild_in.out" freq="15" id="ild_out:%s" lane="%s_0" pos="-50"/>\n'
-    ild_in = '  <inductionLoop file="ild_out.out" freq="15" id="ild_in:%s" lane="%s_0" pos="10"/>\n'
-    write_file('./exp.add.xml', output_ild(ild_in, ild_out))
+    ild = '  <laneAreaDetector file="ild.out" freq="1" id="ild:%s_%d" lane="%s_%d" pos="-50" endPos="-1"/>\n'
+    write_file('./exp.add.xml', output_ild(ild))
 
     # config file
     write_file('./exp.sumocfg', output_config())

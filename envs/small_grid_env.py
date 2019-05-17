@@ -70,8 +70,8 @@ class SmallGridEnv(TrafficSimulator):
         self.phase_map = SmallGridPhase()
         self.state_names = STATE_NAMES
 
-    def _init_sim_config(self):
-        return gen_rou_file(seed=self.seed,
+    def _init_sim_config(self, seed):
+        return gen_rou_file(seed=seed,
                             thread=self.sim_thread,
                             path=self.data_path,
                             num_car_hourly=self.num_car_hourly)
@@ -94,22 +94,23 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s',
                         level=logging.INFO)
     config = configparser.ConfigParser()
-    config.read('./config/config_test.ini')
+    config.read('./config/config_test_small.ini')
     base_dir = './output_result/'
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
-    env = SmallGridEnv(config['ENV_CONFIG'], 2, base_dir, is_record=False, record_stat=True)
+    env = SmallGridEnv(config['ENV_CONFIG'], 2, base_dir, is_record=True, record_stat=True)
     ob = env.reset()
-    controller = SmallGridController(env.control_nodes)
+    controller = SmallGridController(env.node_names)
     rewards = []
     while True:
-        next_ob, reward, done, _ = env.step(controller.forward(ob))
-        rewards += list(reward)
+        next_ob, _, done, reward = env.step(controller.forward(ob))
+        rewards.append(reward)
         if done:
             break
         ob = next_ob
     env.plot_stat(np.array(rewards))
+    logging.info('avg reward: %.2f' % np.mean(rewards))
     env.terminate()
     time.sleep(2)
-    # env.collect_tripinfo()
-    # env.output_data()
+    env.collect_tripinfo()
+    env.output_data()
