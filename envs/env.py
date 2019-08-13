@@ -120,9 +120,8 @@ class TrafficSimulator:
                            'phase': phase}
             for i, ild in enumerate(node.ilds_in):
                 cur_name = 'lane%d_' % i
-                lane_name = 'e:' + ild.split(':')[1]
-                cur_traffic[cur_name + 'queue'] = self.sim.lane.getLastStepHaltingNumber(lane_name)
-                cur_traffic[cur_name + 'flow'] = self.sim.lane.getLastStepVehicleNumber(lane_name)
+                cur_traffic[cur_name + 'queue'] = self.sim.lane.getLastStepHaltingNumber(ild)
+                cur_traffic[cur_name + 'flow'] = self.sim.lane.getLastStepVehicleNumber(ild)
                 # cur_traffic[cur_name + 'wait'] = node.waits[i]
             self.traffic_data.append(cur_traffic)
 
@@ -224,17 +223,7 @@ class TrafficSimulator:
             # edges_in = []
             ilds_in = []
             for lane_name in lanes_in:
-                # edge_name = 'e:' + lane_name.split(':')[-1].split('_')[0]
-                # if edge_name not in edges_in:
-                #     edges_in.append(edge_name)
-                if self.name == 'real_net':
-                    # allow_type = self.sim.lane.getAllowed(lane_name)
-                    # if 'pedestrian' in allow_type:
-                    #     continue
-                    # the ild measurements are incorrect in real net
-                    ild_name = lane_name
-                else:
-                    ild_name = 'ild:' + lane_name.split(':')[-1]
+                ild_name = lane_name
                 if ild_name not in ilds_in:
                     ilds_in.append(ild_name)
             # nodes[node_name].edges_in = edges_in
@@ -433,12 +422,7 @@ class TrafficSimulator:
         queues = []
         for node_name in self.node_names:
             for ild in self.nodes[node_name].ilds_in:
-                if self.name == 'real_net':
-                    # lane_name = ild.split(':')[1]
-                    lane_name = ild
-                else:
-                    lane_name = 'e:' + ild.split(':')[1]
-                queues.append(self.sim.lane.getLastStepHaltingNumber(lane_name))
+                queues.append(self.sim.lane.getLastStepHaltingNumber(ild))
         avg_queue = np.mean(np.array(queues))
         std_queue = np.std(np.array(queues))
         cur_traffic = {'episode': self.cur_episode,
@@ -505,11 +489,7 @@ class TrafficSimulator:
             for i in self.phase_map.get_red_lanes(node.phase_id, a):
                 red_lanes.add(node.lanes_in[i])
             for i in range(len(node.waits)):
-                if self.name == 'real_net':
-                    # lane = node.ilds_in[i].split(':')[1]
-                    lane = node.ilds_in[i]
-                else:
-                    lane = 'e:' + node.ilds_in[i].split(':')[1]
+                lane = node.ilds_in[i]
                 if lane in red_lanes:
                     node.waits[i] += self.control_interval_sec
                 else:
@@ -527,8 +507,8 @@ class TrafficSimulator:
             cur_dict['depart_sec'] = cur_trip['depart']
             cur_dict['arrival_sec'] = cur_trip['arrival']
             cur_dict['duration_sec'] = cur_trip['duration']
-            cur_dict['wait_step'] = cur_trip['waitSteps']
-            cur_dict['wait_sec'] = cur_trip['timeLoss']
+            cur_dict['wait_step'] = cur_trip['waitingCount']
+            cur_dict['wait_sec'] = cur_trip['waitingTime']
             self.trip_data.append(cur_dict)
         # delete the current xml
         cmd = 'rm ' + trip_file

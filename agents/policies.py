@@ -60,7 +60,7 @@ class ACPolicy:
                                                    epsilon=epsilon)
         self._train = self.optimizer.apply_gradients(list(zip(grads, wts)))
         # monitor training
-        if self.name.endswith('_0'):
+        if self.name.endswith('_0a'):
             summaries = []
             # summaries.append(tf.summary.scalar('loss/%s_entropy_loss' % self.name, entropy_loss))
             summaries.append(tf.summary.scalar('loss/%s_policy_loss' % self.name, policy_loss))
@@ -329,7 +329,7 @@ class QPolicy:
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         self._train = self.optimizer.apply_gradients(list(zip(grads, wts)))
         # monitor training
-        if self.name.endswith('_0'):
+        if self.name.endswith('_0a'):
             summaries = []
             summaries.append(tf.summary.scalar('train/%s_loss' % self.name, self.loss))
             summaries.append(tf.summary.scalar('train/%s_q' % self.name, tf.reduce_mean(q0)))

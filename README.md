@@ -25,7 +25,7 @@ Available environments:
 * [Tensorflow](http://www.tensorflow.org/install)
 * [SUMO](http://sumo.dlr.de/wiki/Installing) 
 
-Attention: the code of this repo is for sumo-0.32.0 and it is not compatible with sumo-1.1.0. Quick fixes: 1) removing all special delimiters from names in `build_file.py`. (See [updated version](https://github.com/cts198859/deeprl_dist/blob/master/envs/data/build_file.py)). 2) updating column names of trip.xml (See [updated `env.collect_tripinfo()`](https://github.com/cts198859/deeprl_dist/blob/master/envs/env.py)).
+Attention: the code on master branch is for SUMO version >= 1.1.0. Please go to branch [sumo-0.32.0](https://github.com/cts198859/deeprl_signal_control/tree/sumo-0.32.0) if you are using the old SUMO version.
 
 ## Usages
 First define all hyperparameters in a config file under `[config_dir]`, and create the base directory of experiements `[base_dir]`. Before training, please call `build_file.py` under `[environment_dir]/data/` to generate SUMO network files for `small_grid` and `large_grid` environments.

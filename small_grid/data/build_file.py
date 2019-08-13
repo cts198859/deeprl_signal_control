@@ -62,7 +62,7 @@ def output_road_types():
 
 
 def get_edge_str(edge, from_node, to_node):
-    edge_id = 'e:%s,%s' % (from_node, to_node)
+    edge_id = '%s_%s' % (from_node, to_node)
     return edge % (edge_id, from_node, to_node)
 
 
@@ -103,8 +103,8 @@ def output_edges(edge):
 
 
 def get_con_str(con, from_node, cur_node, to_node):
-    from_edge = 'e:%s,%s' % (from_node, cur_node)
-    to_edge = 'e:%s,%s' % (cur_node, to_node)
+    from_edge = '%s_%s' % (from_node, cur_node)
+    to_edge = '%s_%s' % (cur_node, to_node)
     return con % (from_edge, to_edge)
 
 
@@ -166,19 +166,19 @@ def output_netconfig():
 
 def output_flows(flow, num_car_hourly):
     prob = '%.2f' % (num_car_hourly / float(3600))
-    flow1 = '  <flow id="mf:%s" departPos="random_free" begin="%d" end="%d" probability="' + \
+    flow1 = '  <flow id="mf_%s" departPos="random_free" begin="%d" end="%d" probability="' + \
             prob + '" type="type1">\n' + \
             '    <route edges="%s"/>\n  </flow>\n'
-    routes = ['e:nt1,npc e:npc,nt5 e:nt5,np11',
-              'e:nt1,npc e:npc,nt5 e:nt5,nt6 e:nt6,np12',
-              'e:nt4,nt5 e:nt5,np11',
-              'e:nt4,nt5 e:nt5,nt6 e:nt6,np12',
-              'e:nt1,nt2 e:nt2,np4',
-              'e:nt1,nt6 e:nt6,np13',
-              'e:nt1,npc e:npc,nt3 e:nt3,np6',
-              'e:nt1,npc e:npc,nt3 e:nt3,nt2 e:nt2,np5',
-              'e:nt4,nt3 e:nt3,np6',
-              'e:nt4,nt3 e:nt3,nt2 e:nt2,np5']
+    routes = ['nt1_npc npc_nt5 nt5_np11',
+              'nt1_npc npc_nt5 nt5_nt6 nt6_np12',
+              'nt4_nt5 nt5_np11',
+              'nt4_nt5 nt5_nt6 nt6_np12',
+              'nt1_nt2 nt2_np4',
+              'nt1_nt6 nt6_np13',
+              'nt1_npc npc_nt3 nt3_np6',
+              'nt1_npc npc_nt3 nt3_nt2 nt2_np5',
+              'nt4_nt3 nt3_np6',
+              'nt4_nt3 nt3_nt2 nt2_np5']
     cases = [(3, 4, 5), (0, 3, 4), (1, 2, 5), (4, 5, 9), (5, 6, 9), (4, 7, 8)]
     str_flows = '<routes>\n'
     str_flows += '  <vType id="type1" length="5" accel="5" decel="10"/>\n'
@@ -194,19 +194,19 @@ def output_flows(flow, num_car_hourly):
              [100, 400, 400, 200, 600, 550, 100, 500, 500, 800, 400, 200],
              [100, 200, 300, 300, 300, 400, 600, 600, 800, 500, 400, 300],
              [600, 400, 400, 600, 800, 400, 300, 300, 300, 200, 250, 250]]
-    edges = ['e:%s,%s' % (x, 'nt1') for x in ['np1', 'np2', 'np3']] + \
-            ['e:%s,%s' % (x, 'nt4') for x in ['np8', 'np9']]
+    edges = ['%s_%s' % (x, 'nt1') for x in ['np1', 'np2', 'np3']] + \
+            ['%s_%s' % (x, 'nt4') for x in ['np8', 'np9']]
     times = range(0, 7201, 1200)
     times1 = range(0, 7201, 600)
     for i in range(len(times) - 1):
         t_begin, t_end = times[i], times[i + 1]
         for c in cases[i]:
-            name = str(c) + ',' + str(i)
+            name = str(c) + '_' + str(i)
             str_flows += flow1 % (name, t_begin, t_end, routes[c])
         for i0 in [i * 2, i * 2 + 1]:
             t_begin, t_end = times1[i0], times1[i0 + 1]
             for j in range(5):
-                str_flows += flow % (str(j) + ',' + str(i0), edges[j], t_begin, t_end,
+                str_flows += flow % (str(j) + '_' + str(i0), edges[j], t_begin, t_end,
                                      int(flows[j][i0] * FLOW_MULTIPLIER))
     str_flows += '</routes>\n'
     return str_flows
@@ -224,50 +224,50 @@ def output_turns():
     str_turns = '<turns>\n'
     str_turns += '  <interval begin="0" end="7200">\n'
     # cross nt1
-    from_edge = 'e:%s,%s' % ('np1', 'nt1')
-    to_edges = ['e:nt1,%s' % x for x in ['nt2', 'nt6', 'npc']]
+    from_edge = '%s_%s' % ('np1', 'nt1')
+    to_edges = ['nt1_%s' % x for x in ['nt2', 'nt6', 'npc']]
     to_probs = [0.2, 0.5, 0.3]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
-    from_edge = 'e:%s,%s' % ('np2', 'nt1')
+    from_edge = '%s_%s' % ('np2', 'nt1')
     to_probs = [0.15, 0.15, 0.7]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
-    from_edge = 'e:%s,%s' % ('np3', 'nt1')
+    from_edge = '%s_%s' % ('np3', 'nt1')
     to_probs = [0.5, 0.15, 0.35]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
     # cross nt4
-    from_edge = 'e:%s,%s' % ('np8', 'nt4')
-    to_edges = ['e:nt4,%s' % x for x in ['nt3', 'nt5']]
+    from_edge = '%s_%s' % ('np8', 'nt4')
+    to_edges = ['nt4_%s' % x for x in ['nt3', 'nt5']]
     to_probs = [0.4, 0.6]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
-    from_edge = 'e:%s,%s' % ('np9', 'nt4')
+    from_edge = '%s_%s' % ('np9', 'nt4')
     to_probs = [0.6, 0.4]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
     # cross nt2
-    from_edge = 'e:%s,%s' % ('nt3', 'nt2')
-    to_edges = ['e:nt2,np5']
+    from_edge = '%s_%s' % ('nt3', 'nt2')
+    to_edges = ['nt2_np5']
     to_probs = [1.0]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
-    from_edge = 'e:%s,%s' % ('nt1', 'nt2')
-    to_edges = ['e:nt2,np4']
+    from_edge = '%s_%s' % ('nt1', 'nt2')
+    to_edges = ['nt2_np4']
     to_probs = [1.0]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
     # cross nt6
-    from_edge = 'e:%s,%s' % ('nt5', 'nt6')
-    to_edges = ['e:nt6,np12']
+    from_edge = '%s_%s' % ('nt5', 'nt6')
+    to_edges = ['nt6_np12']
     to_probs = [1.0]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
-    from_edge = 'e:%s,%s' % ('nt1', 'nt6')
-    to_edges = ['e:nt6,np13']
+    from_edge = '%s_%s' % ('nt1', 'nt6')
+    to_edges = ['nt6_np13']
     to_probs = [1.0]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
     # cross nt3
-    from_edge = 'e:%s,%s' % ('npc', 'nt3')
-    to_edges = ['e:nt3,%s' % x for x in ['nt2', 'np6']]
+    from_edge = '%s_%s' % ('npc', 'nt3')
+    to_edges = ['nt3_%s' % x for x in ['nt2', 'np6']]
     to_probs = [0.3, 0.7]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
     # cross nt5
-    from_edge = 'e:%s,%s' % ('npc', 'nt5')
-    to_edges = ['e:nt5,%s' % x for x in ['nt6', 'np11']]
+    from_edge = '%s_%s' % ('npc', 'nt5')
+    to_edges = ['nt5_%s' % x for x in ['nt6', 'np11']]
     to_probs = [0.3, 0.7]
     str_turns += get_turn_str(from_edge, to_edges, to_probs)
     str_turns += '  </interval>\n'
@@ -281,8 +281,8 @@ def output_turns():
     times = range(0, 7201, 600)
     flows = np.array(flows)
     base_probs = np.array([[0.15, 0.15], [0.35, 0.35], [0.15, 0.2]])
-    from_edge = 'e:%s,%s' % ('nt1', 'npc')
-    to_edges = ['e:npc,%s' % x for x in ['nt3', 'nt5']]
+    from_edge = '%s_%s' % ('nt1', 'npc')
+    to_edges = ['npc_%s' % x for x in ['nt3', 'nt5']]
     for i in range(len(times) - 1):
         t_begin, t_end = times[i], times[i + 1]
         cur_prob = np.dot(flows[:, i].reshape(1, 3), base_probs)
@@ -295,13 +295,13 @@ def output_turns():
     for i in [12, 13]:
         from_node = 'nt6'
         to_node = 'np' + str(i)
-        sink_edges.append('e:%s,%s' % (from_node, to_node))
+        sink_edges.append('%s_%s' % (from_node, to_node))
     for i in [4, 5]:
         from_node = 'nt2'
         to_node = 'np' + str(i)
-        sink_edges.append('e:%s,%s' % (from_node, to_node))
-    sink_edges.append('e:%s,%s' % ('nt5', 'np11'))
-    sink_edges.append('e:%s,%s' % ('nt3', 'np6'))
+        sink_edges.append('%s_%s' % (from_node, to_node))
+    sink_edges.append('%s_%s' % ('nt5', 'np11'))
+    sink_edges.append('%s_%s' % ('nt3', 'np6'))
     str_turns += '  <sink edges="%s"/>\n' % (' '.join(sink_edges))
     str_turns += '</turns>\n'
     return str_turns
@@ -314,7 +314,7 @@ def gen_rou_file(seed=None, thread=None, path=None, num_car_hourly=0):
     else:
         out_file = 'exp_%d.rou.xml' % int(thread)
         flow_file = 'exp_%d.raw.rou.xml' % int(thread)
-    flow = '  <flow id="f:%s" from="%s" begin="%d" end="%d" vehsPerHour="%i" type="type1"/>\n'
+    flow = '  <flow id="f_%s" from="%s" begin="%d" end="%d" vehsPerHour="%i" type="type1"/>\n'
     write_file(path + flow_file, output_flows(flow, num_car_hourly=num_car_hourly))
     files = [flow_file, 'exp.turns.xml', 'exp.net.xml', out_file]
     if path is not None:
@@ -351,8 +351,8 @@ def output_config(thread=None):
 
 
 def get_ild_str(from_node, to_node, ild_str, lane_i=0):
-    edge = '%s,%s' % (from_node, to_node)
-    return ild_str % (edge, lane_i, 'e:' + edge, lane_i)
+    edge = '%s_%s' % (from_node, to_node)
+    return ild_str % (edge, lane_i, edge, lane_i)
 
 
 def output_ild(ild):
@@ -437,7 +437,7 @@ def main():
     os.system('netconvert -c exp.netccfg')
 
     # raw.rou.xml file
-    flow = '  <flow id="f:%s" from="%s" begin="%d" end="%d" vehsPerHour="%d" type="type1"/>\n'
+    flow = '  <flow id="f_%s" from="%s" begin="%d" end="%d" vehsPerHour="%d" type="type1"/>\n'
     write_file('./exp.raw.rou.xml', output_flows(flow, num_car_hourly=1000))
 
     # turns.xml file
@@ -447,7 +447,7 @@ def main():
     os.system('jtrrouter -t exp.turns.xml -n exp.net.xml -r exp.raw.rou.xml -o exp.rou.xml')
 
     # add.xml file
-    ild = '  <laneAreaDetector file="ild.out" freq="1" id="ild:%s_%d" lane="%s_%d" pos="-50" endPos="-1"/>\n'
+    ild = '  <laneAreaDetector file="ild.out" freq="1" id="%s_%d" lane="%s_%d" pos="-50" endPos="-1"/>\n'
     write_file('./exp.add.xml', output_ild(ild))
 
     # config file

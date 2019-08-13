@@ -146,7 +146,8 @@ class IA2C(A2C):
         self.policy_ls = []
         for i, (n_s, n_w, n_a) in enumerate(zip(self.n_s_ls, self.n_w_ls, self.n_a_ls)):
             # agent_name is needed to differentiate multi-agents
-            self.policy_ls.append(self._init_policy(n_s - n_w, n_a, n_w, 0, model_config, agent_name=str(i)))
+            self.policy_ls.append(self._init_policy(n_s - n_w, n_a, n_w, 0, model_config,
+                                  agent_name='{:d}a'.format(i)))
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
@@ -242,7 +243,8 @@ class MA2C(IA2C):
         self.policy_ls = []
         for i, (n_s, n_a, n_w, n_f) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_w_ls, self.n_f_ls)):
             # agent_name is needed to differentiate multi-agents
-            self.policy_ls.append(self._init_policy(n_s - n_f - n_w, n_a, n_w, n_f, model_config, agent_name=str(i)))
+            self.policy_ls.append(self._init_policy(n_s - n_f - n_w, n_a, n_w, n_f, model_config,
+                                                    agent_name='{:d}a'.format(i)))
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
@@ -272,7 +274,8 @@ class IQL(A2C):
         self.policy_ls = []
         for i, (n_s, n_a, n_w) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_w_ls)):
             # agent_name is needed to differentiate multi-agents
-            self.policy_ls.append(self._init_policy(n_s, n_a, n_w, model_config, agent_name=str(i)))
+            self.policy_ls.append(self._init_policy(n_s, n_a, n_w, model_config,
+                                                    agent_name='{:d}a'.format(i)))
         self.saver = tf.train.Saver(max_to_keep=5)
         if total_step:
             # training
@@ -286,7 +289,8 @@ class IQL(A2C):
         if self.model_type == 'dqn':
             n_h = model_config.getint('num_h')
             n_fc = model_config.getint('num_fc')
-            policy = DeepQPolicy(n_s - n_w, n_a, n_w, self.n_step, n_fc0=n_fc, n_fc=n_h, name=agent_name)
+            policy = DeepQPolicy(n_s - n_w, n_a, n_w, self.n_step, n_fc0=n_fc, n_fc=n_h,
+                                 name=agent_name)
         else:
             policy = LRQPolicy(n_s, n_a, self.n_step, name=agent_name)
         return policy
@@ -328,7 +332,8 @@ class IQL(A2C):
                 obs, acts, next_obs, rs, dones = self.trans_buffer_ls[i].sample_transition()
                 if i == 0:
                     self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr,
-                                               summary_writer=summary_writer, global_step=global_step + k)
+                                               summary_writer=summary_writer,
+                                               global_step=global_step + k)
                 else:
                     self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
 
