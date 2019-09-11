@@ -107,6 +107,9 @@ class A2C:
         logging.error('Can not find old checkpoint for %s' % model_dir)
         return False
 
+    def reset(self):
+        self.policy._reset()
+
     def backward(self, R, summary_writer=None, global_step=None):
         cur_lr = self.lr_scheduler.get(self.n_step)
         cur_beta = self.beta_scheduler.get(self.n_step)

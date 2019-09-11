@@ -194,12 +194,15 @@ class Trainer():
 
     def perform(self, test_ind):
         ob = self.env.reset(test_ind=test_ind)
+        # note this done is pre-decision to reset LSTM states!
+        done = True
+        self.model.reset()
         rewards = []
         while True:
             if self.agent == 'greedy':
                 action = self.model.forward(ob)
             elif self.agent.endswith('a2c'):
-                policy = self.model.forward(ob, False, 'p')
+                policy = self.model.forward(ob, done, 'p')
                 if self.agent == 'ma2c':
                     self.env.update_fingerprint(policy)
                 if self.agent == 'a2c':
@@ -262,7 +265,9 @@ class Trainer():
             # train
             self.env.train_mode = True
             ob = self.env.reset()
-            done = False
+            # note this done is pre-decision to reset LSTM states!
+            done = True
+            self.model.reset()
             self.cur_step = 0
             rewards = []
             while True:
