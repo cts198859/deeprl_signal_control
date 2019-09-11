@@ -215,6 +215,10 @@ class IA2C(A2C):
         for p in mps:
             p.join()
 
+    def reset(self):
+        for policy in self.policy_ls:
+            policy._reset()
+
     def add_transition(self, obs, actions, rewards, values, done):
         if (self.reward_norm):
             rewards = rewards / self.reward_norm
@@ -353,6 +357,10 @@ class IQL(A2C):
                 action.append(np.argmax(qs))
             qs_ls.append(qs)
         return action, qs_ls
+
+    def reset(self):
+        # do nothing
+        return
 
     def add_transition(self, obs, actions, rewards, next_obs, done):
         if (self.reward_norm):
