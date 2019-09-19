@@ -53,7 +53,7 @@ python3 main.py --base-dir [base_dir] evaluate --agents [agent name] --evaluate-
 ~~~
 It is recommended to have only one agent and one evaluation seed for the demo run. This will launch the SUMO GUI, and `./large_grid/data/view.xml` can be applied to visualize queue length and intersectin delay in edge color and thickness. Below are a few example screenshots.
 
-    t=1500s          |      t=2500s         |     t=3500s          
+|   t=1500s          |      t=2500s         |     t=3500s              
 :-------------------:|:--------------------:|:--------------------:
 ![](./demo/1500.png) | ![](./demo/2500.png) | ![](./demo/3500.png) 
 
