@@ -55,7 +55,7 @@ It is recommended to have only one agent and one evaluation seed for the demo ru
 
 |   t=1500s          |      t=2500s         |     t=3500s              
 :-------------------:|:--------------------:|:--------------------:
-![](./demo/1500.pdf) | ![](./demo/2500.pdf) | ![](./demo/3500.pdf) 
+![](./demo/1500.png) | ![](./demo/2500.png) | ![](./demo/3500.png) 
 
 ## Citation
 If you find this useful in your research, please cite our paper "Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control" ([early access version](https://ieeexplore.ieee.org/document/8667868), [preprint version](https://arxiv.org/pdf/1903.04527.pdf)):
