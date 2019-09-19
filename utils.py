@@ -192,8 +192,8 @@ class Trainer():
             R = 0
         return ob, done, R, rewards
 
-    def perform(self, test_ind):
-        ob = self.env.reset(test_ind=test_ind)
+    def perform(self, test_ind, demo=False):
+        ob = self.env.reset(gui=demo, test_ind=test_ind)
         # note this done is pre-decision to reset LSTM states!
         done = True
         self.model.reset()
@@ -352,13 +352,14 @@ class Tester(Trainer):
 
 
 class Evaluator(Tester):
-    def __init__(self, env, model, output_path):
+    def __init__(self, env, model, output_path, demo=False):
         self.env = env
         self.model = model
         self.agent = self.env.agent
         self.env.train_mode = False
         self.test_num = self.env.test_num
         self.output_path = output_path
+        self.demo = demo
 
     def run(self):
         is_record = True
@@ -367,7 +368,7 @@ class Evaluator(Tester):
         self.env.init_data(is_record, record_stats, self.output_path)
         time.sleep(1)
         for test_ind in range(self.test_num):
-            reward, _ = self.perform(test_ind)
+            reward, _ = self.perform(test_ind, demo=self.demo)
             self.env.terminate()
             logging.info('test %i, avg reward %.2f' % (test_ind, reward))
             time.sleep(2)

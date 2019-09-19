@@ -38,6 +38,7 @@ def parse_args():
     sp.add_argument('--evaluate-seeds', type=str, required=False,
                     default=','.join([str(i) for i in range(10000, 100001, 10000)]),
                     help="random seeds for evaluation, split by ,")
+    sp.add_argument('--demo', action='store_true', help="shows SUMO gui")
     args = parser.parse_args()
     if not args.option:
         parser.print_help()
@@ -152,7 +153,7 @@ def train(args):
     model.save(dirs['model'], final_step)
 
 
-def evaluate_fn(agent_dir, output_dir, seeds, port):
+def evaluate_fn(agent_dir, output_dir, seeds, port, demo):
     agent = agent_dir.split('/')[-1]
     if not check_dir(agent_dir):
         logging.error('Evaluation: %s does not exist!' % agent)
@@ -191,7 +192,7 @@ def evaluate_fn(agent_dir, output_dir, seeds, port):
         model = greedy_policy
     env.agent = agent
     # collect evaluation data
-    evaluator = Evaluator(env, model, output_dir)
+    evaluator = Evaluator(env, model, output_dir, demo=demo)
     evaluator.run()
 
 
@@ -211,7 +212,7 @@ def evaluate(args):
     for i, agent in enumerate(agents):
         agent_dir = base_dir + '/' + agent
         thread = threading.Thread(target=evaluate_fn,
-                                  args=(agent_dir, dirs['eva_data'], seeds, i))
+                                  args=(agent_dir, dirs['eva_data'], seeds, i, args.demo))
         thread.start()
         threads.append(thread)
     for thread in threads:

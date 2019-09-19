@@ -30,22 +30,31 @@ Attention: the code on master branch is for SUMO version >= 1.1.0. Please go to 
 ## Usages
 First define all hyperparameters in a config file under `[config_dir]`, and create the base directory of experiements `[base_dir]`. Before training, please call `build_file.py` under `[environment_dir]/data/` to generate SUMO network files for `small_grid` and `large_grid` environments.
 
-To train a new agent, run
+1. To train a new agent, run
 ~~~
 python3 main.py --base-dir [base_dir] train --config-dir [config_dir] --test-mode no_test
 ~~~
 `no_test` is suggested, since tests will significantly slow down the training speed.
 
-To access tensorboard during training, run
+2. To access tensorboard during training, run
 ~~~
 tensorboard --logdir=[base_dir]/log
 ~~~
 
-To evaluate and compare trained agents, run
+3. To evaluate and compare trained agents, run
 ~~~
 python3 main.py --base-dir [base_dir] evaluate --agents [agent names] --evaluate-seeds [seeds]
 ~~~
 Evaluation data will be output to `[base_dir]/eva_data`, and make sure evaluation seeds are different from those used in training.
+
+4. To visualize the agent behavior, run
+~~~
+python3 main.py --base-dir [base_dir] evaluate --agents [agent name] --evaluate-seeds [seed] --demo
+~~~
+It is recommended to have only one agent and one evaluation seed for the demo run. This will launch the SUMO GUI, and `./large_grid/data/view.xml` can be applied to visualize queue length and intersectin delay in edge color and thickness. Below are a few example screenshots.
+    t=1500s          |      t=2500s         |     t=3500s          |
+:-------------------:|:--------------------:|:--------------------:|
+![](./demo/1500.png) | ![](./demo/2500.png) | ![](./demo/3500.png) |
 
 ## Citation
 If you find this useful in your research, please cite our paper "Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control" ([early access version](https://ieeexplore.ieee.org/document/8667868), [preprint version](https://arxiv.org/pdf/1903.04527.pdf)):
