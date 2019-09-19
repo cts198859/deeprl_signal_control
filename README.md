@@ -52,9 +52,10 @@ Evaluation data will be output to `[base_dir]/eva_data`, and make sure evaluatio
 python3 main.py --base-dir [base_dir] evaluate --agents [agent name] --evaluate-seeds [seed] --demo
 ~~~
 It is recommended to have only one agent and one evaluation seed for the demo run. This will launch the SUMO GUI, and `./large_grid/data/view.xml` can be applied to visualize queue length and intersectin delay in edge color and thickness. Below are a few example screenshots.
-    t=1500s          |      t=2500s         |     t=3500s          |
-:-------------------:|:--------------------:|:--------------------:|
-![](./demo/1500.png) | ![](./demo/2500.png) | ![](./demo/3500.png) |
+
+    t=1500s          |      t=2500s         |     t=3500s          
+:-------------------:|:--------------------:|:--------------------:
+![](./demo/1500.png) | ![](./demo/2500.png) | ![](./demo/3500.png) 
 
 ## Citation
 If you find this useful in your research, please cite our paper "Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control" ([early access version](https://ieeexplore.ieee.org/document/8667868), [preprint version](https://arxiv.org/pdf/1903.04527.pdf)):
