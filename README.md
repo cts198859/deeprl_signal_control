@@ -32,9 +32,9 @@ First define all hyperparameters in a config file under `[config_dir]`, and crea
 
 1. To train a new agent, run
 ~~~
-python3 main.py --base-dir [base_dir] train --config-dir [config_dir] --test-mode no_test
+python3 main.py --base-dir [base_dir]/[agent] train --config-dir [config_dir] --test-mode no_test
 ~~~
-`no_test` is suggested, since tests will significantly slow down the training speed.
+`[agent]` is from `{ia2c, ma2c, iqll, iqld}`. `no_test` is suggested, since tests will significantly slow down the training speed.
 
 2. To access tensorboard during training, run
 ~~~
@@ -43,19 +43,26 @@ tensorboard --logdir=[base_dir]/log
 
 3. To evaluate and compare trained agents, run
 ~~~
-python3 main.py --base-dir [base_dir] evaluate --agents [agent names] --evaluate-seeds [seeds]
+python3 main.py --base-dir [base_dir] evaluate --agents [agents] --evaluate-seeds [seeds]
 ~~~
 Evaluation data will be output to `[base_dir]/eva_data`, and make sure evaluation seeds are different from those used in training.
 
 4. To visualize the agent behavior, run
 ~~~
-python3 main.py --base-dir [base_dir] evaluate --agents [agent name] --evaluate-seeds [seed] --demo
+python3 main.py --base-dir [base_dir] evaluate --agents [agent] --evaluate-seeds [seed] --demo
 ~~~
 It is recommended to have only one agent and one evaluation seed for the demo run. This will launch the SUMO GUI, and `./large_grid/data/view.xml` can be applied to visualize queue length and intersectin delay in edge color and thickness. Below are a few example screenshots.
 
 |   t=1500s          |      t=2500s         |     t=3500s              
 :-------------------:|:--------------------:|:--------------------:
-![](./demo/1500.png) | ![](./demo/2500.png) | ![](./demo/3500.png) 
+![](./figs/1500.png) | ![](./figs/2500.png) | ![](./figs/3500.png) 
+
+## Reproducibility
+Due to SUMO version change and a few corresponding code modifications (e.g. `tau="0.5"` has to be removed from `vType` to prevent extensive vehicle collisions in simulation), it becomes difficult to reproduce paper results. So we have re-run the experiments using the latest master and SUMO 1.1.0 and provided the following training plots as reference. The conclusion still remains the same, that is, MA2C ~ IQL-LR > IA2C in large grid and MA2C > IA2C > IQL-LR in Monaco net. Note rather than reproducing exactly the same results, an evaluation is always valid as far as the comparison is fair, that is, fixing env config and seed across agents. 
+
+|   large grid                   |      Monaco net                   
+:-------------------------------:|:------------------------------:
+![](./figs/large_grid_train.png) | ![](./figs/real_net_train.png)       
 
 ## Citation
 If you find this useful in your research, please cite our paper "Multi-Agent Deep Reinforcement Learning for Large-Scale Traffic Signal Control" ([early access version](https://ieeexplore.ieee.org/document/8667868), [preprint version](https://arxiv.org/pdf/1903.04527.pdf)):
