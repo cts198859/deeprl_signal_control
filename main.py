@@ -19,7 +19,7 @@ from utils import (Counter, Trainer, Tester, Evaluator,
                    plot_evaluation, plot_train)
 
 def parse_args():
-    default_base_dir = '/Users/tchu/Documents/rl_test/signal_control_results/eval_dec16/real_net'
+    default_base_dir = '/Users/tchu/Documents/rl_test/signal_control_results/eval_sep2019/large_grid'
     default_config_dir = './config/config_test_large.ini'
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-dir', type=str, required=False,
@@ -159,7 +159,7 @@ def evaluate_fn(agent_dir, output_dir, seeds, port, demo):
         logging.error('Evaluation: %s does not exist!' % agent)
         return
     # load config file for env
-    config_dir = find_file(agent_dir)
+    config_dir = find_file(agent_dir + '/data/')
     if not config_dir:
         return
     config = configparser.ConfigParser()
@@ -186,7 +186,7 @@ def evaluate_fn(agent_dir, output_dir, seeds, port, demo):
         else:
             model = IQL(env.n_s_ls, env.n_a_ls, env.n_w_ls, 0, config['MODEL_CONFIG'],
                         seed=0, model_type='lr')
-        if not model.load(agent_dir + '/'):
+        if not model.load(agent_dir + '/model/'):
             return
     else:
         model = greedy_policy
