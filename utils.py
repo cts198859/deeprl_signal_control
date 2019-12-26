@@ -192,7 +192,7 @@ class Trainer():
             R = 0
         return ob, done, R, rewards
 
-    def perform(self, test_ind, demo=False):
+    def perform(self, test_ind, demo=False, policy_type='default'):
         ob = self.env.reset(gui=demo, test_ind=test_ind)
         # note this done is pre-decision to reset LSTM states!
         done = True
@@ -202,17 +202,28 @@ class Trainer():
             if self.agent == 'greedy':
                 action = self.model.forward(ob)
             elif self.agent.endswith('a2c'):
+                # policy-based on-poicy learning
                 policy = self.model.forward(ob, done, 'p')
                 if self.agent == 'ma2c':
                     self.env.update_fingerprint(policy)
                 if self.agent == 'a2c':
-                    action = np.argmax(np.array(policy))
+                    if policy_type != 'deterministic':
+                        action = np.random.choice(np.arange(len(policy)), p=policy)
+                    else:
+                        action = np.argmax(np.array(policy))
                 else:
                     action = []
                     for pi in policy:
-                        action.append(np.argmax(np.array(pi)))
+                        if policy_type != 'deterministic':
+                            action.append(np.random.choice(np.arange(len(pi)), p=pi))
+                        else:
+                            action.append(np.argmax(np.array(pi)))
             else:
-                action, _ = self.model.forward(ob)
+                # value-based off-policy learning
+                if policy_type != 'stochastic':
+                    action, _ = self.model.forward(ob)
+                else:
+                    action, _ = self.model.forward(ob, stochastic=True)
             next_ob, reward, done, global_reward = self.env.step(action)
             rewards.append(global_reward)
             if done:
@@ -352,7 +363,7 @@ class Tester(Trainer):
 
 
 class Evaluator(Tester):
-    def __init__(self, env, model, output_path, demo=False):
+    def __init__(self, env, model, output_path, demo=False, policy_type='default'):
         self.env = env
         self.model = model
         self.agent = self.env.agent
@@ -360,6 +371,7 @@ class Evaluator(Tester):
         self.test_num = self.env.test_num
         self.output_path = output_path
         self.demo = demo
+        self.policy_type = policy_type
 
     def run(self):
         is_record = True
@@ -368,7 +380,7 @@ class Evaluator(Tester):
         self.env.init_data(is_record, record_stats, self.output_path)
         time.sleep(1)
         for test_ind in range(self.test_num):
-            reward, _ = self.perform(test_ind, demo=self.demo)
+            reward, _ = self.perform(test_ind, demo=self.demo, policy_type=self.policy_type)
             self.env.terminate()
             logging.info('test %i, avg reward %.2f' % (test_ind, reward))
             time.sleep(2)

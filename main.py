@@ -35,7 +35,9 @@ def parse_args():
     sp = subparsers.add_parser('evaluate', help="evaluate and compare agents under base dir")
     sp.add_argument('--agents', type=str, required=False,
                     default='naive', help="agent folder names for evaluation, split by ,")
-    sp.add_argument('--evaluate-seeds', type=str, required=False,
+    sp.add_argument('--evaluation-policy-type', type=str, required=False, default='default',
+                    help="inference policy type in evaluation: default, stochastic, or deterministic")
+    sp.add_argument('--evaluation-seeds', type=str, required=False,
                     default=','.join([str(i) for i in range(10000, 100001, 10000)]),
                     help="random seeds for evaluation, split by ,")
     sp.add_argument('--demo', action='store_true', help="shows SUMO gui")
@@ -153,7 +155,7 @@ def train(args):
     model.save(dirs['model'], final_step)
 
 
-def evaluate_fn(agent_dir, output_dir, seeds, port, demo):
+def evaluate_fn(agent_dir, output_dir, seeds, port, demo, policy_type):
     agent = agent_dir.split('/')[-1]
     if not check_dir(agent_dir):
         logging.error('Evaluation: %s does not exist!' % agent)
@@ -192,7 +194,7 @@ def evaluate_fn(agent_dir, output_dir, seeds, port, demo):
         model = greedy_policy
     env.agent = agent
     # collect evaluation data
-    evaluator = Evaluator(env, model, output_dir, demo=demo)
+    evaluator = Evaluator(env, model, output_dir, demo=demo, policy_type=policy_type)
     evaluator.run()
 
 
@@ -202,8 +204,9 @@ def evaluate(args):
     init_log(dirs['eva_log'])
     agents = args.agents.split(',')
     # enforce the same evaluation seeds across agents
-    seeds = args.evaluate_seeds
-    logging.info('Evaluation: random seeds: %s' % seeds)
+    seeds = args.evaluation_seeds
+    policy_type = args.evaluation_policy_type
+    logging.info('Evaluation: policy type: %s, random seeds: %s' % (policy_type, seeds))
     if not seeds:
         seeds = []
     else:
@@ -212,7 +215,7 @@ def evaluate(args):
     for i, agent in enumerate(agents):
         agent_dir = base_dir + '/' + agent
         thread = threading.Thread(target=evaluate_fn,
-                                  args=(agent_dir, dirs['eva_data'], seeds, i, args.demo))
+                                  args=(agent_dir, dirs['eva_data'], seeds, i, args.demo, policy_type))
         thread.start()
         threads.append(thread)
     for thread in threads:

@@ -12,7 +12,7 @@ Available NN layers:
 Fully-connected, LSTM.
 
 Available algorithms:
-IQL, IA2C, IA2C with stabilization (called MA2C).
+IQL, IA2C, IA2C with stabilization (called MA2C in this paper). For more advanced algorithms, please check [deeprl_network](https://github.com/cts198859/deeprl_network). 
 
 Available environments:
 * A 6-intersection benchmark traffic network. [Ye, Bao-Lin, et al. "A hierarchical model predictive control approach for signal splits optimization in large-scale urban road networks." IEEE Transactions on Intelligent Transportation Systems 17.8 (2016): 2182-2192.](https://ieeexplore.ieee.org/abstract/document/7406703/)
@@ -43,13 +43,13 @@ tensorboard --logdir=[base_dir]/log
 
 3. To evaluate and compare trained agents, run
 ~~~
-python3 main.py --base-dir [base_dir] evaluate --agents [agents] --evaluate-seeds [seeds]
+python3 main.py --base-dir [base_dir] evaluate --agents [agents] --evaluation-seeds [seeds]
 ~~~
-Evaluation data will be output to `[base_dir]/eva_data`, and make sure evaluation seeds are different from those used in training.
+Evaluation data will be output to `[base_dir]/eva_data`, and make sure evaluation seeds are different from those used in training. Under default evaluation setting, the inference policy of A2C is stochastic whereas that of Q-learning is greedy (deterministic). To explicitly specifiy the inference policy type, pass argument `--evaluation-policy-type [default/stochastic/deterministic]`. Please note running a determinisitc inference policy for A2C may cause the performance loss, due to the violation of "on-policy" learning.   
 
 4. To visualize the agent behavior, run
 ~~~
-python3 main.py --base-dir [base_dir] evaluate --agents [agent] --evaluate-seeds [seed] --demo
+python3 main.py --base-dir [base_dir] evaluate --agents [agent] --evaluation-seeds [seed] --demo
 ~~~
 It is recommended to have only one agent and one evaluation seed for the demo run. This will launch the SUMO GUI, and `./large_grid/data/view.xml` can be applied to visualize queue length and intersectin delay in edge color and thickness. Below are a few example screenshots.
 
