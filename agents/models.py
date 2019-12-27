@@ -344,7 +344,7 @@ class IQL(A2C):
                 else:
                     self.policy_ls[i].backward(self.sess, obs, acts, next_obs, dones, rs, cur_lr)
 
-    def forward(self, obs, mode='act'):
+    def forward(self, obs, mode='act', stochastic=False):
         if mode == 'explore':
             eps = self.eps_scheduler.get(1)
         action = []
@@ -354,7 +354,11 @@ class IQL(A2C):
             if (mode == 'explore') and (np.random.random() < eps):
                 action.append(np.random.randint(self.n_a_ls[i]))
             else:
-                action.append(np.argmax(qs))
+                if not stochastic:
+                    action.append(np.argmax(qs))
+                else:
+                    qs = qs / np.sum(qs)
+                    action.append(np.random.choice(np.arange(len(qs)), p=qs))
             qs_ls.append(qs)
         return action, qs_ls
 
