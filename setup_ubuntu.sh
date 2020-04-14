@@ -1,4 +1,4 @@
-sudo pip3 install tensorflow
+sudo pip3 install tensorflow==1.12.0
 sudo pip3 install matplotlib
 sudo pip3 install seaborn
 sudo add-apt-repository ppa:sumo/stable
