@@ -21,9 +21,11 @@ Available environments:
 
 
 ## Requirements
-* Python3
-* [Tensorflow](http://www.tensorflow.org/install)
-* [SUMO](http://sumo.dlr.de/wiki/Installing) 
+* Python3==3.5
+* [Tensorflow](http://www.tensorflow.org/install)==1.12.0
+* [SUMO](http://sumo.dlr.de/wiki/Installing)==1.1.0
+
+Required packages can be installed by running `setup_mac.sh` or `setup_ubuntu.sh`. 
 
 Attention: the code on master branch is for SUMO version >= 1.1.0. Please go to branch [sumo-0.32.0](https://github.com/cts198859/deeprl_signal_control/tree/sumo-0.32.0) if you are using the old SUMO version.
 
