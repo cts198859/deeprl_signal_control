@@ -23,7 +23,7 @@ Available environments:
 ## Requirements
 * Python3==3.5
 * [Tensorflow](http://www.tensorflow.org/install)==1.12.0
-* [SUMO](http://sumo.dlr.de/wiki/Installing)==1.1.0
+* [SUMO](http://sumo.dlr.de/wiki/Installing)>=1.1.0
 
 Required packages can be installed by running `setup_mac.sh` or `setup_ubuntu.sh`. 
 
@@ -60,7 +60,7 @@ It is recommended to have only one agent and one evaluation seed for the demo ru
 ![](./figs/1500.png) | ![](./figs/2500.png) | ![](./figs/3500.png) 
 
 ## Reproducibility
-Due to SUMO version change and a few corresponding code modifications (e.g. `tau="0.5"` has to be removed from `vType` to prevent extensive vehicle collisions in simulation), it becomes difficult to reproduce paper results. So we have re-run the experiments using the latest master and SUMO 1.1.0 and provided the following training plots as reference. The conclusion still remains the same, that is, MA2C ~ IQL-LR > IA2C in large grid and MA2C > IA2C > IQL-LR in Monaco net. Note rather than reproducing exactly the same results, an evaluation is always valid as far as the comparison is fair, that is, fixing env config and seed across agents. 
+Due to SUMO version change and a few corresponding code modifications (e.g. `tau="0.5"` has to be removed from `vType` to prevent extensive vehicle collisions in simulation), it becomes difficult to reproduce paper results, which are based on SUMO 0.32.0. So we have re-run the experiments using SUMO 1.1.0 and provided the following training plots as reference. The conclusion still remains the same, that is, MA2C ~ IQL-LR > IA2C in large grid and MA2C > IA2C > IQL-LR in Monaco net. Note rather than reproducing exactly the same results, an evaluation is always valid as far as the comparison is fair, that is, fixing env config and seed across agents. 
 
 |   large grid                   |      Monaco net                   
 :-------------------------------:|:------------------------------:
