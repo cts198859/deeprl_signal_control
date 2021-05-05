@@ -579,7 +579,7 @@ class TrafficSimulator:
         self._set_phase(action, 'green', rest_interval_sec)
         self._simulate(rest_interval_sec)
         state = self._get_state()
-        reward = self._measure_reward_step()
+        reward,length, time = self._measure_reward_step()
         done = False
         if self.cur_sec >= self.episode_length_sec:
             done = True
