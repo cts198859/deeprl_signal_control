@@ -324,6 +324,8 @@ class TrafficSimulator:
 
     def _measure_reward_step(self):
         rewards = []
+        lengths = []
+        times = []
         for node_name in self.node_names:
             queues = []
             waits = []
@@ -364,7 +366,11 @@ class TrafficSimulator:
             else:
                 reward = - queue - self.coef_wait * wait
             rewards.append(reward)
-        return np.array(rewards)
+            lengths.append(queue)
+            times.append(wait)
+
+
+        return np.array(rewards),np.array(lengths),np.array(times)
 
     def _measure_state_step(self):
         for node_name in self.node_names:
@@ -573,11 +579,15 @@ class TrafficSimulator:
         self._set_phase(action, 'green', rest_interval_sec)
         self._simulate(rest_interval_sec)
         state = self._get_state()
-        reward = self._measure_reward_step()
+        reward,length, time = self._measure_reward_step()
         done = False
         if self.cur_sec >= self.episode_length_sec:
             done = True
         global_reward = np.sum(reward) # for fair comparison
+        global_length = np.sum(length) # for fair comparison
+        global_time = np.sum(time) # for fair comparison
+
+
         if self.is_record:
             action_r = ','.join(['%d' % a for a in action])
             cur_control = {'episode': self.cur_episode,
@@ -628,7 +638,7 @@ class TrafficSimulator:
                     n_node = 1 + len(self.nodes[node_name].neighbor)
                     new_reward.append(cur_reward / (n_node * REALNET_REWARD_NORM))
             reward = np.array(new_reward)
-        return state, reward, done, global_reward
+        return state, reward, done, global_reward,global_length,global_time
 
     def update_fingerprint(self, policy):
         for node_name, pi in zip(self.node_names, policy):

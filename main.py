@@ -93,7 +93,7 @@ def train(args):
     env = init_env(config['ENV_CONFIG'])
     logging.info('Training: s dim: %d, a dim %d, s dim ls: %r, a dim ls: %r' %
                  (env.n_s, env.n_a, env.n_s_ls, env.n_a_ls))
-
+    # 每次训练里plot其实是初始化的环境
     # init step counter
     total_step = int(config.getfloat('TRAIN_CONFIG', 'total_step'))
     test_step = int(config.getfloat('TRAIN_CONFIG', 'test_interval'))

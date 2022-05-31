@@ -143,6 +143,10 @@ class Trainer():
         ob = prev_ob
         done = prev_done
         rewards = []
+        lengths = []
+        times = []
+
+
         for _ in range(self.n_step):
             if self.agent.endswith('a2c'):
                 policy, value = self.model.forward(ob, done)
@@ -157,8 +161,11 @@ class Trainer():
                         action.append(np.random.choice(np.arange(len(pi)), p=pi))
             else:
                 action, policy = self.model.forward(ob, mode='explore')
-            next_ob, reward, done, global_reward = self.env.step(action)
+            next_ob, reward, done, global_reward,global_length,global_time = self.env.step(action)
             rewards.append(global_reward)
+            lengths.append(global_length)
+            times.append(global_time)
+
             global_step = self.global_counter.next()
             self.cur_step += 1
             if self.agent.endswith('a2c'):
@@ -190,7 +197,7 @@ class Trainer():
                 R = self.model.forward(ob, False, 'v')
         else:
             R = 0
-        return ob, done, R, rewards
+        return ob, done, R, rewards,lengths,times
 
     def perform(self, test_ind, demo=False, policy_type='default'):
         ob = self.env.reset(gui=demo, test_ind=test_ind)
@@ -282,8 +289,11 @@ class Trainer():
             self.cur_step = 0
             rewards = []
             while True:
-                ob, done, R, cur_rewards = self.explore(ob, done)
+                ob, done, R, cur_rewards,cur_lengths,cur_times = self.explore(ob, done)
                 rewards += cur_rewards
+                lengths += cur_lengths
+                times += cur_times
+
                 global_step = self.global_counter.cur_step
                 if self.agent.endswith('a2c'):
                     self.model.backward(R, self.summary_writer, global_step)
@@ -296,16 +306,38 @@ class Trainer():
             rewards = np.array(rewards)
             mean_reward = np.mean(rewards)
             std_reward = np.std(rewards)
+
+            lengths = np.array(lengths)
+            mean_length = np.mean(lengths)
+            std_length = np.std(lengths)
+
+            times = np.array(times)
+            mean_time = np.mean(times)
+            std_time = np.std(times)
+
             log = {'agent': self.agent,
                    'step': global_step,
                    'test_id': -1,
                    'avg_reward': mean_reward,
                    'std_reward': std_reward}
+            log1 = {'agent': self.agent,
+                   'step': global_step,
+                   'test_id': -1,
+                   'avg_length': mean_length,
+                   'std_length': std_length}
+            log2 = {'agent': self.agent,
+                   'step': global_step,
+                   'test_id': -1,
+                   'avg_time': mean_time,
+                   'std_time': std_time}
             self.data.append(log)
             self._add_summary(mean_reward, global_step)
             self.summary_writer.flush()
         df = pd.DataFrame(self.data)
         df.to_csv(self.output_path + 'train_reward.csv')
+        df.to_csv(self.output_path + 'queue_length.csv')
+        df.to_csv(self.output_path + 'traffic_delay.csv')
+
 
 
 class Tester(Trainer):
